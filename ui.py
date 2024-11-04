@@ -3,6 +3,7 @@ import os
 
 import streamlit as st
 import openai
+from openai import OpenAI
 from tenacity import retry, stop_after_attempt, wait_fixed
 
 
@@ -13,18 +14,19 @@ class OpenAIChat:
         self.wait_seconds = wait_seconds
         self.temperature = temperature
         self.seed = seed
+        self.client = OpenAI()
     
     def generate_response(self, prompt: str) -> str:
         # Wrap retry params inside generate_response
-        @retry(stop=stop_after_attempt(self.stop_after_attempts), wait=wait_fixed(self.wait_seconds))
+        # @retry(stop=stop_after_attempt(self.stop_after_attempts), wait=wait_fixed(self.wait_seconds))
         def _call_api(prompt: str) -> str:
-            response = openai.ChatCompletion.create(
+            completion = self.client.chat.completions.create(
                 model=self.model_name,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=self.temperature,
                 seed=self.seed,
             )
-            return response['choices'][0]['message']['content']
+            return completion.choices[0].message
         
         message = _call_api(prompt)
         return message
@@ -61,8 +63,6 @@ if __name__ == "__main__":
     parser.add_argument("--model_name", type=str, default="gpt-4", help="The name of the OpenAI model to use")
     parser.add_argument("--seed", type=int, default=0, help="Seed for the model")
     args = parser.parse_args()
-
-    print(args)
 
     # Set your OpenAI API key
     openai.api_key = os.getenv("OPENAI_API_KEY")
