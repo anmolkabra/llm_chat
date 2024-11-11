@@ -1,72 +1,80 @@
 import argparse
-import os
 
 import streamlit as st
-import openai
-from openai import OpenAI
-from tenacity import retry, stop_after_attempt, wait_fixed
+
+import config
+from data import Conversation, Message
+from llm import LlamaChat, OpenAIChat
 
 
-class OpenAIChat:
-    def __init__(self, model_name: str, stop_after_attempts: int, wait_seconds: int, temperature: float, seed: int):
-        self.model_name = model_name
-        self.stop_after_attempts = stop_after_attempts
-        self.wait_seconds = wait_seconds
-        self.temperature = temperature
-        self.seed = seed
-        self.client = OpenAI()
-    
-    def generate_response(self, prompt: str) -> str:
-        # Wrap retry params inside generate_response
-        # @retry(stop=stop_after_attempt(self.stop_after_attempts), wait=wait_fixed(self.wait_seconds))
-        def _call_api(prompt: str) -> str:
-            completion = self.client.chat.completions.create(
-                model=self.model_name,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=self.temperature,
-                seed=self.seed,
-            )
-            return completion.choices[0].message
-        
-        message = _call_api(prompt)
-        return message
+def display_conv(conv: Conversation) -> None:
+    for message in conv.messages:
+        with st.chat_message(message.role):
+            st.markdown(message.content)
 
 
 def ui_main(args: argparse.Namespace) -> None:
-    st.title("Chat with OpenAI GPT-4")
+    st.title(f"Chat with {args.model_name}")
 
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
+    # Initialize conversation and LLM
+    conv: Conversation = Conversation(messages=[])
+    match args.model_name:
+        case "gpt-4o" | "gpt-4" | "gpt-3.5":
+            llm = OpenAIChat(
+                model_name=args.model_name,
+                max_retries=3,
+                wait_seconds=2,
+                temperature=0,
+                seed=args.seed,
+                stream=args.stream_generations,
+            )
+        case "llama3.2":
+            llm = LlamaChat(
+                model_path=args.model_name,
+                max_retries=3,
+                wait_seconds=2,
+                temperature=0,
+                seed=args.seed,
+            )
 
-    openai_chat = OpenAIChat(
-        model_name=args.model_name,
-        stop_after_attempts=3, 
-        wait_seconds=2, 
-        temperature=0,
-        seed=args.seed,
-    )
+    # Display conversation
+    display_conv(conv)
 
-    user_input = st.text_input("You: ", "")
+    # Get user input
+    if prompt := st.chat_input("Your message:"):
+        # Add user message to chat history
+        conv.messages.append(Message(role="user", content=prompt))
 
-    if st.button("Send"):
-        if user_input:
-            st.session_state.messages.append(f"You: {user_input}")
-            response = openai_chat.generate_response(user_input)
-            st.session_state.messages.append(f"{args.model_name}: {response}")
+        # Display user message in chat message container
+        with st.chat_message("user"):
+            st.markdown(prompt)
 
-    for message in st.session_state.messages:
-        st.write(message)
+        # Generate assistant response
+        with st.chat_message("assistant"):
+            if args.stream_generations:
+                stream = llm.generate_response(conv)
+                response = st.write_stream(stream)
+            else:
+                response = llm.generate_response(conv)
+                st.write(response)
+
+        # Add assistant response to chat history
+        conv.messages.append(Message(role="assistant", content=response))
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Streamlit OpenAI Chat")
-    parser.add_argument("--model_name", type=str, default="gpt-4", help="The name of the OpenAI model to use")
+    parser = argparse.ArgumentParser(description="Streamlit Chat")
+    parser.add_argument(
+        "--model_name",
+        type=str,
+        default="gpt-4o",
+        choices=config.llm_model_name_choices,
+        help="The name of the OpenAI model to use",
+    )
     parser.add_argument("--seed", type=int, default=0, help="Seed for the model")
+    parser.add_argument(
+        "--stream_generations", store_action=True, help="Flag to switch on streaming, only possible for OpenAI models"
+    )
     args = parser.parse_args()
 
-    # Set your OpenAI API key
-    openai.api_key = os.getenv("OPENAI_API_KEY")
-
     ui_main(args)
-
-
