@@ -76,7 +76,7 @@ if __name__ == "__main__":
                 seed=args.seed,
                 stream_generations=args.stream_generations,
             )
-        case "llama3.2":
+        case name if "llama" in name:
             llm_chat = llm.LlamaChat(
                 model_path=args.model_name,
                 max_retries=3,
