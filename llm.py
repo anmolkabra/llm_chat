@@ -10,7 +10,7 @@ from transformers import AutoProcessor, MllamaForConditionalGeneration
 from data import Conversation
 
 
-class LLM(abc.ABC):
+class LLMChat(abc.ABC):
     def __init__(self, max_retries: int, wait_seconds: int, temperature: float, seed: int):
         self.max_retries = max_retries
         self.wait_seconds = wait_seconds
@@ -22,7 +22,7 @@ class LLM(abc.ABC):
         pass
 
 
-class OpenAIChat(LLM):
+class OpenAIChat(LLMChat):
     def __init__(
         self,
         model_name: str,
@@ -48,13 +48,12 @@ class OpenAIChat(LLM):
                 seed=self.seed,
                 stream=self.stream_generations,
             )
-            return completion.choices[0].message
+            return completion if self.stream_generations else completion.choices[0].message
 
-        message = _call_api(conv)
-        return message
+        return _call_api(conv)
 
 
-class LlamaChat(LLM):
+class LlamaChat(LLMChat):
     def __init__(self, model_path: str, max_retries: int, wait_seconds: int, temperature: float, seed: int):
         super().__init__(max_retries, wait_seconds, temperature, seed)
         self.model_path = model_path

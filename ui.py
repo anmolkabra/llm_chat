@@ -3,47 +3,34 @@ import argparse
 import streamlit as st
 
 import config
+import llm
 from data import Conversation, Message
-from llm import LlamaChat, OpenAIChat
 
 
-def display_conv(conv: Conversation) -> None:
-    for message in conv.messages:
+def display_chat(chat_history: Conversation) -> None:
+    for message in chat_history.messages:
         with st.chat_message(message.role):
             st.markdown(message.content)
 
 
-def ui_main(args: argparse.Namespace) -> None:
+def update_chat(role: str, content: str) -> None:
+    st.session_state.chat_history.messages.append(Message(role=role, content=content))
+
+
+def ui_main(args: argparse.Namespace, llm_chat: llm.LLMChat, chat_history: Conversation) -> None:
     st.title(f"Chat with {args.model_name}")
 
-    # Initialize conversation and LLM
-    conv: Conversation = Conversation(messages=[])
-    match args.model_name:
-        case "gpt-4o" | "gpt-4" | "gpt-3.5":
-            llm = OpenAIChat(
-                model_name=args.model_name,
-                max_retries=3,
-                wait_seconds=2,
-                temperature=0,
-                seed=args.seed,
-                stream=args.stream_generations,
-            )
-        case "llama3.2":
-            llm = LlamaChat(
-                model_path=args.model_name,
-                max_retries=3,
-                wait_seconds=2,
-                temperature=0,
-                seed=args.seed,
-            )
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = chat_history
 
     # Display conversation
-    display_conv(conv)
+    display_chat(st.session_state.chat_history)
 
     # Get user input
     if prompt := st.chat_input("Your message:"):
+        print(st.session_state.chat_history)
         # Add user message to chat history
-        conv.messages.append(Message(role="user", content=prompt))
+        update_chat(role="user", content=prompt)
 
         # Display user message in chat message container
         with st.chat_message("user"):
@@ -52,29 +39,50 @@ def ui_main(args: argparse.Namespace) -> None:
         # Generate assistant response
         with st.chat_message("assistant"):
             if args.stream_generations:
-                stream = llm.generate_response(conv)
+                stream = llm_chat.generate_response(st.session_state.chat_history)
                 response = st.write_stream(stream)
             else:
-                response = llm.generate_response(conv)
+                response = llm_chat.generate_response(st.session_state.chat_history)
                 st.write(response)
 
         # Add assistant response to chat history
-        conv.messages.append(Message(role="assistant", content=response))
+        update_chat(role="assistant", content=response)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Streamlit Chat")
+    parser = argparse.ArgumentParser(description="Chat with Assistant")
     parser.add_argument(
         "--model_name",
         type=str,
         default="gpt-4o",
         choices=config.llm_model_name_choices,
-        help="The name of the OpenAI model to use",
+        help="The name of the model to use",
     )
     parser.add_argument("--seed", type=int, default=0, help="Seed for the model")
     parser.add_argument(
-        "--stream_generations", store_action=True, help="Flag to switch on streaming, only possible for OpenAI models"
+        "--stream_generations", action="store_true", help="Flag to switch on streaming, only possible for OpenAI models"
     )
     args = parser.parse_args()
 
-    ui_main(args)
+    # Initialize conversation and LLM
+    chat_history: Conversation = Conversation(messages=[])
+    match args.model_name:
+        case "gpt-4o" | "gpt-4" | "gpt-3.5":
+            llm_chat = llm.OpenAIChat(
+                model_name=args.model_name,
+                max_retries=3,
+                wait_seconds=2,
+                temperature=0,
+                seed=args.seed,
+                stream_generations=args.stream_generations,
+            )
+        case "llama3.2":
+            llm_chat = llm.LlamaChat(
+                model_path=args.model_name,
+                max_retries=3,
+                wait_seconds=2,
+                temperature=0,
+                seed=args.seed,
+            )
+
+    ui_main(args, llm_chat, chat_history)
