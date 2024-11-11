@@ -7,7 +7,7 @@ from PIL import Image
 from tenacity import retry, stop_after_attempt, wait_fixed
 from transformers import AutoProcessor, MllamaForConditionalGeneration
 
-from data import Conversation
+from data import ContentImageMessage, Conversation
 
 
 class LLMChat(abc.ABC):
@@ -67,13 +67,12 @@ class LlamaChat(LLMChat):
 
     def generate_response(self, conv: Conversation) -> str:
         # Take out images from messages
-        # TODO images
         images: list[Image.Image] = []
-        # for message in conv.messages:
-        #     for content in message.content:
-        #         match content:
-        #             case {"type": "image", "image": image}:
-        #                 images.append(image)
+        for message in conv.messages:
+            for content in message.content:
+                match content:
+                    case ContentImageMessage(image=image):
+                        images.append(image)
 
         # Process text and images
         input_text = self.processor.apply_chat_template(conv.messages, add_generation_prompt=True)
@@ -85,7 +84,7 @@ class LlamaChat(LLMChat):
         ).to(self.model.device)
 
         # Generate and decode
-        outputs = self.model.generate(**inputs, temperature=self.temperature)
+        outputs = self.model.generate(**inputs, temperature=self.temperature, max_new_tokens=1024)
         decoded_output = self.processor.decode(outputs[0])
         split_output = decoded_output.split("assistant<|end_header_id|>")
         return split_output[-1].strip() if split_output else ""
