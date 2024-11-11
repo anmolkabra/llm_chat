@@ -27,3 +27,9 @@ make RUN_FLAGS="--model_name meta-llama/Llama-3.2-11B-Instruct" run
 # or
 ./run_chat.sh
 ```
+
+## TODOs
+
+- UI reloads the model from memory on every call. Probably because streamlit repaints on each chat input. Should be fixable.
+- Want to eventually load Llama 3.2 on my mac, but there's not much hardware/software support yet.
+- Image uploads through the UI. Should be doable.
