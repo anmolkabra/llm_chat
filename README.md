@@ -3,7 +3,8 @@
 ## Installation
 
 We recommend miniconda3 and python3.12.
-Tested on an M3 Macbook Pro with 16GB RAM, and the AIDA cluster.
+- OpenAI GPT models work on both mac and linux.
+- Llama models currently work on the AIDA cluster. Resources needed for `Llama-3.2-11B-Vision-Instruct`: 1 A100 and >25GB GPU RAM.
 
 ```bash
 conda create -n llm_chat python=3.12
@@ -23,13 +24,9 @@ make RUN_FLAGS="--model_name meta-llama/Llama-3.2-11B-Instruct --model_local_pat
 # If not downloaded, ask huggingface to download for you
 huggingface-cli login
 make RUN_FLAGS="--model_name meta-llama/Llama-3.2-11B-Instruct" run
-
-# or
-./run_chat.sh
 ```
 
 ## TODOs
 
-- UI reloads the model from memory on every call. Probably because streamlit repaints on each chat input. Should be fixable.
 - Want to eventually load Llama 3.2 on my mac, but there's not much hardware/software support yet.
 - Image uploads through the UI. Should be doable.

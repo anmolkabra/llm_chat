@@ -37,7 +37,7 @@ def get_llm_chat(_args: argparse.Namespace) -> llm.LLMChat:
                 seed=_args.seed,
                 stream_generations=_args.stream_generations,
             )
-        case name if "llama" in name:
+        case name if "llama" in name.lower():
             llm_chat = llm.LlamaChat(
                 model_path=_args.model_local_path or _args.model_name,
                 max_retries=3,
@@ -71,7 +71,7 @@ def update_chat(role: Literal["user", "assistant"], text: str) -> None:
     Update the chat history in streamlit's session state with a new text message assigned to a role.
 
     Args:
-        role (Literal["user", "assistant"]): _description_
+        role (Literal["user", "assistant"]): Either "user" or "assistant".
         text (str): Content of the message.
     """
     st.session_state.chat_history.messages.append(Message(role=role, content=[ContentTextMessage(text=text)]))
