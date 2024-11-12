@@ -1,7 +1,6 @@
 import argparse
 from typing import Literal
 
-import requests
 import streamlit as st
 from PIL import Image
 
@@ -131,8 +130,7 @@ if __name__ == "__main__":
 
     # Initialize conversation and LLM
     # HACK Feed an image at the beginning. Otherwise llama complains
-    url = "https://upload.wikimedia.org/wikipedia/commons/7/78/Image.jpg"
-    image = Image.open(requests.get(url, stream=True).raw)
+    image = Image.open("assets/Image.jpg")
     init_message = Message(role="user", content=[ContentTextMessage(text="Hello!"), ContentImageMessage(image=image)])
     chat_history: Conversation = Conversation(messages=[init_message])
     llm_chat: llm.LLMChat = get_llm_chat(args)

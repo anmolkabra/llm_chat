@@ -1,4 +1,6 @@
 import abc
+import base64
+import io
 import os
 
 import openai
@@ -7,7 +9,7 @@ from PIL import Image
 from tenacity import retry, stop_after_attempt, wait_fixed
 from transformers import AutoProcessor, MllamaForConditionalGeneration
 
-from data import ContentImageMessage, Conversation
+from data import ContentImageMessage, ContentTextMessage, Conversation
 
 
 class LLMChat(abc.ABC):
@@ -60,18 +62,43 @@ class OpenAIChat(LLMChat):
         self.stream_generations = stream_generations
         self.openai_client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+    @staticmethod
+    def pil_to_base64(image: Image.Image) -> str:
+        buffered = io.BytesIO()
+        image.save(buffered, format="JPEG")
+        return base64.b64encode(buffered.getvalue()).decode("utf-8")
+
     def generate_response(self, conv: Conversation) -> str:
+        # Convert conv to OpenAI format
+        openai_conv = []
+        for message in conv.messages:
+            for content in message.content:
+                match content:
+                    case ContentTextMessage(text=text):
+                        openai_conv.append({"role": message.role, "content": [{"type": "text", "text": text}]})
+                    case ContentImageMessage(image=image):
+                        base64_image = OpenAIChat.pil_to_base64(image)
+                        openai_conv.append(
+                            {
+                                "role": message.role,
+                                "content": [{
+                                    "type": "image_url",
+                                    "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
+                                }],
+                            }
+                        )
+
         # Wrap retry params inside generate_response
         @retry(stop=stop_after_attempt(self.max_retries), wait=wait_fixed(self.wait_seconds))
         def _call_api(conv: Conversation) -> str:
             completion = self.openai_client.chat.completions.create(
                 model=self.model_name,
-                messages=conv.messages,
+                messages=openai_conv,
                 temperature=self.temperature,
                 seed=self.seed,
                 stream=self.stream_generations,
             )
-            return completion if self.stream_generations else completion.choices[0].message
+            return completion if self.stream_generations else completion.choices[0].message.content
 
         return _call_api(conv)
 
