@@ -1,4 +1,5 @@
 import argparse
+from typing import Literal
 
 import requests
 import streamlit as st
@@ -9,7 +10,52 @@ import llm
 from data import ContentImageMessage, ContentTextMessage, Conversation, Message
 
 
+@st.cache_resource
+def get_llm_chat(_args: argparse.Namespace) -> llm.LLMChat:
+    """
+    Loads the LLM chat object based on the model name.
+    Function is cached in streamlit so that the model is not reloaded on every rerun.
+
+    Args:
+        _args (argparse.Namespace): The parsed arguments.
+
+    Returns:
+        llm.LLMChat: The LLM chat object.
+    """
+    # Use _args instead of args so that streamlit does not hash the variable namespace object
+    assert (
+        _args.model_name in config.llm_model_name_choices
+    ), f"Model name must be one of {config.llm_model_name_choices}"
+
+    match _args.model_name:
+        case "gpt-4o" | "gpt-4" | "gpt-3.5":
+            llm_chat = llm.OpenAIChat(
+                model_name=_args.model_name,
+                max_retries=3,
+                wait_seconds=2,
+                temperature=0,
+                seed=_args.seed,
+                stream_generations=_args.stream_generations,
+            )
+        case name if "llama" in name:
+            llm_chat = llm.LlamaChat(
+                model_path=_args.model_local_path or _args.model_name,
+                max_retries=3,
+                wait_seconds=2,
+                temperature=0.01,
+                seed=_args.seed,
+            )
+
+    return llm_chat
+
+
 def display_chat(chat_history: Conversation) -> None:
+    """
+    Display the chat history in the chat message container.
+
+    Args:
+        chat_history (Conversation): Conversation history object.
+    """
     for message in chat_history.messages:
         with st.chat_message(message.role):
             for content in message.content:
@@ -20,15 +66,27 @@ def display_chat(chat_history: Conversation) -> None:
                         st.image(image, use_container_width=True)
 
 
-def update_chat(role: str, text: str) -> None:
+def update_chat(role: Literal["user", "assistant"], text: str) -> None:
+    """
+    Update the chat history in streamlit's session state with a new text message assigned to a role.
+
+    Args:
+        role (Literal["user", "assistant"]): _description_
+        text (str): Content of the message.
+    """
     st.session_state.chat_history.messages.append(Message(role=role, content=[ContentTextMessage(text=text)]))
 
 
-def ui_main(args: argparse.Namespace, llm_chat: llm.LLMChat, chat_history: Conversation) -> None:
+def ui_main(args: argparse.Namespace) -> None:
+    """
+    Main UI function for the chat application.
+
+    Args:
+        args (argparse.Namespace): The parsed arguments.
+    """
     st.title(f"Chat with {args.model_name}")
 
-    if "chat_history" not in st.session_state:
-        st.session_state.chat_history = chat_history
+    llm_chat: llm.LLMChat = st.session_state.llm_chat
 
     # Display conversation
     display_chat(st.session_state.chat_history)
@@ -77,24 +135,12 @@ if __name__ == "__main__":
     image = Image.open(requests.get(url, stream=True).raw)
     init_message = Message(role="user", content=[ContentTextMessage(text="Hello!"), ContentImageMessage(image=image)])
     chat_history: Conversation = Conversation(messages=[init_message])
-    match args.model_name:
-        case "gpt-4o" | "gpt-4" | "gpt-3.5":
-            llm_chat = llm.OpenAIChat(
-                model_name=args.model_name,
-                max_retries=3,
-                wait_seconds=2,
-                temperature=0,
-                seed=args.seed,
-                stream_generations=args.stream_generations,
-            )
-        case name if "llama" in name:
-            llm_chat = llm.LlamaChat(
-                model_path=args.model_local_path or args.model_name,
-                max_retries=3,
-                wait_seconds=2,
-                temperature=0.01,
-                seed=args.seed,
-            )
+    llm_chat: llm.LLMChat = get_llm_chat(args)
 
-    # FIXME llama loads on every paint??
-    ui_main(args, llm_chat, chat_history)
+    if "llm_chat" not in st.session_state:
+        st.session_state.llm_chat = llm_chat
+
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = chat_history
+
+    ui_main(args)

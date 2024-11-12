@@ -1,3 +1,5 @@
+from typing import Literal
+
 from PIL import Image
 from pydantic import BaseModel
 
@@ -17,7 +19,7 @@ class ContentImageMessage(BaseModel):
 
 
 class Message(BaseModel):
-    role: str
+    role: Literal["user", "assistant"]
     content: list[ContentTextMessage | ContentImageMessage]
 
 
