@@ -20,11 +20,11 @@ If you want to download from Huggingface, you'll need to set `$HUGGINGFACE_HUB_T
 First, request a node with an A100 (for the Llama 3.2 11B model) and note the compute node's ID, e.g. `c0021`.
 ```bash
 # If you have already downloaded Llama 3.2 to a local directory e.g. LLAMA_MODEL_PATH=/mnt/beegfs/bulk/mirror/localllama/localLlama-3.2-11B-Vision-Instruct
-make RUN_FLAGS="--model_name meta-llama/Llama-3.2-11B-Instruct --model_local_path $LLAMA_MODEL_PATH" run
+make RUN_FLAGS="--model_name meta-llama/Llama-3.2-11B-Vision-Instruct --model_local_path $LLAMA_MODEL_PATH" run
 
 # If not downloaded, ask huggingface to download for you
 huggingface-cli login
-make RUN_FLAGS="--model_name meta-llama/Llama-3.2-11B-Instruct" run
+make RUN_FLAGS="--model_name meta-llama/Llama-3.2-11B-Vision-Instruct" run
 ```
 
 Now open a new terminal and run `./scripts/forward_streamlit_port_slurm_to_mac.sh c0021`.
