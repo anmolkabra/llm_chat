@@ -17,6 +17,7 @@ If you want to download from Huggingface, you'll need to set `$HUGGINGFACE_HUB_T
 
 ## Run
 
+First, request a node with an A100 (for the Llama 3.2 11B model) and note the compute node's ID, e.g. `c0021`.
 ```bash
 # If you have already downloaded Llama 3.2 to a local directory e.g. LLAMA_MODEL_PATH=/mnt/beegfs/bulk/mirror/localllama/localLlama-3.2-11B-Vision-Instruct
 make RUN_FLAGS="--model_name meta-llama/Llama-3.2-11B-Instruct --model_local_path $LLAMA_MODEL_PATH" run
@@ -25,6 +26,11 @@ make RUN_FLAGS="--model_name meta-llama/Llama-3.2-11B-Instruct --model_local_pat
 huggingface-cli login
 make RUN_FLAGS="--model_name meta-llama/Llama-3.2-11B-Instruct" run
 ```
+
+Now open a new terminal and run `./scripts/forward_streamlit_port_slurm_to_mac.sh c0021`.
+Then open http://localhost:8501 in your browser.
+This script forwards port 8501 from the compute node c0021 -> AIDA head node -> your laptop.
+You might need to need to change the `aida` in the SSH cmd in that script to `user@aida.cac.cornell.edu`.
 
 ## TODOs
 
