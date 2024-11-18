@@ -1,4 +1,5 @@
 import argparse
+from pathlib import Path
 from typing import Literal
 
 import streamlit as st
@@ -7,6 +8,13 @@ from PIL import Image
 import config
 import llm
 from data import ContentImageMessage, ContentTextMessage, Conversation, Message
+
+
+def init_conv() -> Conversation:
+    # HACK Feed an image at the beginning. Otherwise llama complains
+    image = Image.open("assets/Image.jpg")
+    init_message = Message(role="user", content=[ContentTextMessage(text="Hello!"), ContentImageMessage(image=image)])
+    return Conversation(messages=[init_message])
 
 
 @st.cache_resource
@@ -27,7 +35,7 @@ def get_llm_chat(_args: argparse.Namespace) -> llm.LLMChat:
     ), f"Model name must be one of {config.llm_model_name_choices}"
 
     match _args.model_name:
-        case "gpt-4o" | "gpt-4" | "gpt-3.5":
+        case "gpt-4o" | "gpt-4" | "gpt-4o-mini":
             llm_chat = llm.OpenAIChat(
                 model_name=_args.model_name,
                 max_retries=3,
@@ -76,6 +84,68 @@ def update_chat(role: Literal["user", "assistant"], text: str) -> None:
     st.session_state.chat_history.messages.append(Message(role=role, content=[ContentTextMessage(text=text)]))
 
 
+def clear_chat() -> None:
+    """
+    Clear the chat history in streamlit's session state.
+    """
+    st.session_state.chat_history = init_conv()
+
+
+def load_chat_from_path(file_path: str) -> None:
+    """
+    Load chat history from a JSON file and update the chat history in streamlit's session state.
+
+    Args:
+        file_path (str): Path to the JSON file.
+    """
+    if not Path(file_path).expanduser().exists():
+        st.error(f"File does not exist: {file_path}")
+        return
+    chat_history = Conversation.load_from_path(file_path)
+    st.session_state.chat_history = chat_history
+
+
+def save_chat_to_path(file_path: str) -> None:
+    """
+    Save chat history to a JSON file. If the file's directory does not exist, it will be created.
+
+    Args:
+        file_path (str): Path to the JSON file.
+    """
+    # If the file path directory does not exist, create it
+    Path(file_path).expanduser().parent.mkdir(parents=True, exist_ok=True)
+    # If the file path does not have a .json extension, add it
+    if Path(file_path).suffix != ".json":
+        file_path += ".json"
+    conv: Conversation = st.session_state.chat_history
+    conv.save_to_path(file_path)
+
+
+def display_sidebar() -> None:
+    """
+    Display the sidebar:
+    - Button for Clear chat
+    - Widget for Load chat from file
+    - Widget for Save chat to file
+    """
+    with st.sidebar:
+        st.button("Clear chat", on_click=clear_chat)
+
+        st.divider()
+
+        st.subheader("Load chat")
+        load_file_path = st.text_input("JSON file path for loading chat")
+        st.button("Load chat", on_click=load_chat_from_path, args=(load_file_path.strip(),))
+
+        st.divider()
+
+        st.subheader("Save chat")
+        save_file_path = st.text_input("JSON file path for saving chat")
+        st.button("Save chat", on_click=save_chat_to_path, args=(save_file_path.strip(),))
+
+        st.divider()
+
+
 def ui_main(args: argparse.Namespace) -> None:
     """
     Main UI function for the chat application.
@@ -86,6 +156,9 @@ def ui_main(args: argparse.Namespace) -> None:
     st.title(f"Chat with {args.model_name}")
 
     llm_chat: llm.LLMChat = st.session_state.llm_chat
+
+    # Display sidebar
+    display_sidebar()
 
     # Display conversation
     display_chat(st.session_state.chat_history)
@@ -117,7 +190,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model_name",
         type=str,
-        default="gpt-4o",
+        default="gpt-4o-mini",
         choices=config.llm_model_name_choices,
         help="The name of the model to use",
     )
@@ -129,10 +202,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Initialize conversation and LLM
-    # HACK Feed an image at the beginning. Otherwise llama complains
-    image = Image.open("assets/Image.jpg")
-    init_message = Message(role="user", content=[ContentTextMessage(text="Hello!"), ContentImageMessage(image=image)])
-    chat_history: Conversation = Conversation(messages=[init_message])
+    chat_history = init_conv()
     llm_chat: llm.LLMChat = get_llm_chat(args)
 
     if "llm_chat" not in st.session_state:
