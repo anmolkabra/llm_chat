@@ -2,6 +2,7 @@ import abc
 import os
 
 import openai
+import together
 import torch
 from PIL import Image
 from tenacity import retry, stop_after_attempt, wait_fixed
@@ -96,6 +97,64 @@ class OpenAIChat(LLMChat):
             return completion if self.stream_generations else completion.choices[0].message.content
 
         return _call_api(conv)
+
+
+class TogetherChat(LLMChat):
+    def __init__(
+        self,
+        model_name: str,
+        max_retries: int,
+        wait_seconds: int,
+        temperature: float,
+        seed: int,
+        stream_generations: bool,
+    ):
+        """
+        Args:
+            model_name (str): The model name to use.
+            stream_generations (bool): Flag to enable streaming generations.
+        """
+        super().__init__(max_retries, wait_seconds, temperature, seed)
+        self.model_name = model_name
+        self.stream_generations = stream_generations
+        self.together_client = together.Together(api_key=os.getenv("TOGETHER_API_KEY"))
+
+    def generate_response(self, conv: Conversation) -> str:
+        # Convert conv to Together format
+        together_conv = []
+        for message in conv.messages:
+            for content in message.content:
+                match content:
+                    case ContentTextMessage(text=text):
+                        together_conv.append({"role": message.role, "content": [{"type": "text", "text": text}]})
+                    case ContentImageMessage(image=image):
+                        base64_image = files.pil_to_base64(image)
+                        together_conv.append(
+                            {
+                                "role": message.role,
+                                "content": [
+                                    {
+                                        "type": "image_url",
+                                        "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
+                                    }
+                                ],
+                            }
+                        )
+
+        # Wrap retry params inside generate_response
+        @retry(stop=stop_after_attempt(self.max_retries), wait=wait_fixed(self.wait_seconds))
+        def _call_api(conv: Conversation) -> str:
+            completion = self.together_client.chat.completions.create(
+                model=self.model_name,
+                messages=together_conv,
+                temperature=self.temperature,
+                seed=self.seed,
+                stream=self.stream_generations,
+            )
+            return completion if self.stream_generations else completion.choices[0].message.content
+
+        return _call_api(conv)
+
 
 
 class LlamaChat(LLMChat):

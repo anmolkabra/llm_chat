@@ -10,11 +10,12 @@ import llm
 from data import ContentImageMessage, ContentTextMessage, Conversation, Message
 
 
-def init_conv() -> Conversation:
-    # HACK Feed an image at the beginning. Otherwise llama complains
-    image = Image.open("assets/Image.jpg")
-    init_message = Message(role="user", content=[ContentTextMessage(text="Hello!"), ContentImageMessage(image=image)])
-    return Conversation(messages=[init_message])
+def init_conv(add_init_image: bool = False) -> Conversation:
+    content = [ContentTextMessage(text="Hello!")]
+    if add_init_image:
+        image = Image.open("assets/Image.jpg")
+        content.append(ContentImageMessage(image=image))
+    return Conversation(messages=[Message(role="user", content=content)])
 
 
 @st.cache_resource
@@ -31,26 +32,35 @@ def get_llm_chat(_args: argparse.Namespace) -> llm.LLMChat:
     """
     # Use _args instead of args so that streamlit does not hash the variable namespace object
     assert (
-        _args.model_name in config.llm_model_name_choices
-    ), f"Model name must be one of {config.llm_model_name_choices}"
+        _args.model_name in config.supported_llm_model_names
+    ), f"Model name must be one of {config.supported_llm_model_names}"
 
     match _args.model_name:
-        case "gpt-4o" | "gpt-4" | "gpt-4o-mini":
+        case model_name if model_name in config.GPT_MODEL_NAMES:
             llm_chat = llm.OpenAIChat(
-                model_name=_args.model_name,
+                model_name=model_name,
                 max_retries=3,
                 wait_seconds=2,
                 temperature=0,
                 seed=_args.seed,
                 stream_generations=_args.stream_generations,
             )
-        case name if "llama" in name.lower():
+        case model_name if model_name in config.LLAMA_MODEL_NAMES:
             llm_chat = llm.LlamaChat(
-                model_path=_args.model_local_path or _args.model_name,
+                model_path=_args.model_local_path or model_name,
                 max_retries=3,
                 wait_seconds=2,
                 temperature=0.01,
                 seed=_args.seed,
+            )
+        case model_name if model_name in config.TOGETHER_MODEL_NAMES:
+            llm_chat = llm.TogetherChat(
+                model_name=model_name.lstrip("together:"), # Remove the prefix "together:"
+                max_retries=3,
+                wait_seconds=2,
+                temperature=0,
+                seed=_args.seed,
+                stream_generations=_args.stream_generations,
             )
 
     return llm_chat
@@ -190,8 +200,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model_name",
         type=str,
-        default="gpt-4o-mini",
-        choices=config.llm_model_name_choices,
+        default="together:meta-llama/Llama-Vision-Free",
+        choices=config.supported_llm_model_names,
         help="The name of the model to use",
     )
     parser.add_argument("--model_local_path", type=str, default=None, help="Path to the model to use")
@@ -202,7 +212,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Initialize conversation and LLM
-    chat_history = init_conv()
+    is_model_llama = args.model_name in config.LLAMA_MODEL_NAMES
+    chat_history = init_conv(add_init_image=is_model_llama) # HACK Feed an image at the beginning. Otherwise llama complains
     llm_chat: llm.LLMChat = get_llm_chat(args)
 
     if "llm_chat" not in st.session_state:
