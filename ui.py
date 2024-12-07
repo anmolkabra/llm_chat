@@ -1,11 +1,10 @@
 import argparse
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import streamlit as st
 from PIL import Image
 
-import config
 import llm
 from data import ContentImageMessage, ContentTextMessage, Conversation, Message
 
@@ -22,7 +21,7 @@ def init_conv(add_init_image: bool = False) -> Conversation:
 def get_llm_chat(_args: argparse.Namespace) -> llm.LLMChat:
     """
     Loads the LLM chat object based on the model name.
-    Function is cached in streamlit so that the model is not reloaded on every rerun.
+    Function is cached in streamlit so that the model is not reloaded on every streamlit ui repaint.
 
     Args:
         _args (argparse.Namespace): The parsed arguments.
@@ -31,39 +30,13 @@ def get_llm_chat(_args: argparse.Namespace) -> llm.LLMChat:
         llm.LLMChat: The LLM chat object.
     """
     # Use _args instead of args so that streamlit does not hash the variable namespace object
-    assert (
-        _args.model_name in config.supported_llm_model_names
-    ), f"Model name must be one of {config.supported_llm_model_names}"
-
-    match _args.model_name:
-        case model_name if model_name in config.GPT_MODEL_NAMES:
-            llm_chat = llm.OpenAIChat(
-                model_name=model_name,
-                max_retries=3,
-                wait_seconds=2,
-                temperature=0,
-                seed=_args.seed,
-                stream_generations=_args.stream_generations,
-            )
-        case model_name if model_name in config.LLAMA_MODEL_NAMES:
-            llm_chat = llm.LlamaChat(
-                model_path=_args.model_local_path or model_name,
-                max_retries=3,
-                wait_seconds=2,
-                temperature=0.01,
-                seed=_args.seed,
-            )
-        case model_name if model_name in config.TOGETHER_MODEL_NAMES:
-            llm_chat = llm.TogetherChat(
-                model_name=model_name.lstrip("together:"), # Remove the prefix "together:"
-                max_retries=3,
-                wait_seconds=2,
-                temperature=0,
-                seed=_args.seed,
-                stream_generations=_args.stream_generations,
-            )
-
-    return llm_chat
+    model_kwargs = {
+        "max_retries": _args.max_retries,
+        "wait_seconds": _args.wait_seconds,
+        "temperature": _args.temperature,
+        "seed": _args.seed,
+    }
+    return llm.get_llm(_args.model_name, model_kwargs)
 
 
 def display_chat(chat_history: Conversation) -> None:
@@ -184,12 +157,8 @@ def ui_main(args: argparse.Namespace) -> None:
 
         # Generate assistant response
         with st.chat_message("assistant"):
-            if args.stream_generations:
-                stream = llm_chat.generate_response(st.session_state.chat_history)
-                response = st.write_stream(stream)
-            else:
-                response = llm_chat.generate_response(st.session_state.chat_history)
-                st.write(response)
+            response = llm_chat.generate_response(st.session_state.chat_history)
+            st.write(response)
 
         # Add assistant response to chat history
         update_chat(role="assistant", text=response)
@@ -201,18 +170,18 @@ if __name__ == "__main__":
         "--model_name",
         type=str,
         default="together:meta-llama/Llama-Vision-Free",
-        choices=config.supported_llm_model_names,
+        choices=llm.SUPPORTED_LLM_NAMES,
         help="The name of the model to use",
     )
     parser.add_argument("--model_local_path", type=str, default=None, help="Path to the model to use")
     parser.add_argument("--seed", type=int, default=0, help="Seed for the model")
-    parser.add_argument(
-        "--stream_generations", action="store_true", help="Flag to switch on streaming, only possible for OpenAI models"
-    )
+    parser.add_argument("--max_retries", type=int, default=3, help="Maximum number of retries for the model")
+    parser.add_argument("--wait_seconds", type=int, default=2, help="Wait time between retries in seconds")
+    parser.add_argument("--temperature", type=float, default=0., help="Temperature for the model's response generation")
     args = parser.parse_args()
 
     # Initialize conversation and LLM
-    is_model_llama = args.model_name in config.LLAMA_MODEL_NAMES
+    is_model_llama = args.model_name in llm.LocalLlamaChat.SUPPORTED_LLM_NAMES
     chat_history = init_conv(add_init_image=is_model_llama) # HACK Feed an image at the beginning. Otherwise llama complains
     llm_chat: llm.LLMChat = get_llm_chat(args)
 
