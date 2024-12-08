@@ -17,7 +17,7 @@ from data import ContentImageMessage, ContentTextMessage, Conversation
 class LLMChat(abc.ABC):
     SUPPORTED_LLM_NAMES: list[str] = []
 
-    def __init__(self, model_name: str, max_retries: int, wait_seconds: int, temperature: float, seed: int):
+    def __init__(self, model_name: str, max_retries: int, wait_seconds: int, temperature: float, seed: int, model_path: str | None = None):
         """
         Initialize the LLM chat object.
 
@@ -27,6 +27,7 @@ class LLMChat(abc.ABC):
             wait_seconds (int): Number of seconds to wait between API calls.
             temperature (float): Temperature parameter for sampling.
             seed (int): Seed for random number generator, passed to the model if applicable.
+            model_path (Optional[str]): Local path to the model, defaults to None.
         """
         assert model_name in self.SUPPORTED_LLM_NAMES, f"Model name {model_name} must be one of {self.SUPPORTED_LLM_NAMES}."
         self.model_name = model_name
@@ -34,6 +35,15 @@ class LLMChat(abc.ABC):
         self.wait_seconds = wait_seconds
         self.temperature = temperature
         self.seed = seed
+        self.model_path = model_path
+
+        self.model_kwargs = dict(
+            max_retries=max_retries,
+            wait_seconds=wait_seconds,
+            temperature=temperature,
+            seed=seed,
+            model_path=model_path,
+        )
 
     @abc.abstractmethod
     def generate_response(self, conv: Conversation) -> str:
@@ -50,15 +60,8 @@ class LLMChat(abc.ABC):
 
 
 class CommonLLMChat(LLMChat):
-    def __init__(
-        self,
-        model_name: str,
-        max_retries: int,
-        wait_seconds: int,
-        temperature: float,
-        seed: int,
-    ):
-        super().__init__(model_name, max_retries, wait_seconds, temperature, seed)
+    def __init__(self, model_name: str, max_retries: int, wait_seconds: int, temperature: float, seed: int, model_path: str | None = None):
+        super().__init__(model_name, max_retries, wait_seconds, temperature, seed, model_path)
         self.client = None
     
     @abc.abstractmethod
@@ -124,15 +127,8 @@ class OpenAIChat(CommonLLMChat):
         "gpt-4o-2024-11-20",
     ]
 
-    def __init__(
-        self,
-        model_name: str,
-        max_retries: int,
-        wait_seconds: int,
-        temperature: float,
-        seed: int,
-    ):
-        super().__init__(model_name, max_retries, wait_seconds, temperature, seed)
+    def __init__(self, model_name: str, max_retries: int, wait_seconds: int, temperature: float, seed: int, model_path: str | None = None):
+        super().__init__(model_name, max_retries, wait_seconds, temperature, seed, model_path)
         self.client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     
     def _call_api(self, messages_api_format: list[dict]) -> str:
@@ -154,16 +150,9 @@ class TogetherChat(OpenAIChat):
         "together:meta-llama/Llama-Vision-Free",
     ]
 
-    def __init__(
-        self,
-        model_name: str,
-        max_retries: int,
-        wait_seconds: int,
-        temperature: float,
-        seed: int,
-    ):
+    def __init__(self, model_name: str, max_retries: int, wait_seconds: int, temperature: float, seed: int, model_path: str | None = None):
         assert model_name.startswith("together:"), "model_name must start with 'together:'"
-        super().__init__(model_name, max_retries, wait_seconds, temperature, seed)
+        super().__init__(model_name, max_retries, wait_seconds, temperature, seed, model_path)
         self.client = together.Together(api_key=os.getenv("TOGETHER_API_KEY"))
 
     def _call_api(self, messages_api_format: list[dict]) -> str:
@@ -184,15 +173,8 @@ class AnthropicChat(CommonLLMChat):
         "claude-3-5-sonnet-20241022",
     ]
 
-    def __init__(
-        self,
-        model_name: str,
-        max_retries: int,
-        wait_seconds: int,
-        temperature: float,
-        seed: int,
-    ):
-        super().__init__(model_name, max_retries, wait_seconds, temperature, seed)
+    def __init__(self, model_name: str, max_retries: int, wait_seconds: int, temperature: float, seed: int, model_path: str | None = None):
+        super().__init__(model_name, max_retries, wait_seconds, temperature, seed, model_path)
         self.client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
     
     def _call_api(self, messages_api_format: list[dict]) -> str:
@@ -210,9 +192,9 @@ class OllamaChat(CommonLLMChat):
         "ollama:llama3.2:1b",
     ]
 
-    def __init__(self, model_name: str, max_retries: int, wait_seconds: int, temperature: float, seed: int):
+    def __init__(self, model_name: str, max_retries: int, wait_seconds: int, temperature: float, seed: int, model_path: str | None = None):
         assert model_name.startswith("ollama:"), "model_name must start with 'ollama:'"
-        super().__init__(model_name, max_retries, wait_seconds, temperature, seed)
+        super().__init__(model_name, max_retries, wait_seconds, temperature, seed, model_path)
         self.ollama_headers: dict = {}
         self.client = ollama.Client(
             host='http://localhost:11434',
@@ -260,19 +242,17 @@ class LocalLlamaChat(LLMChat):
         "meta-llama/Llama-3.2-11B-Vision-Instruct",
     ]
 
-    def __init__(self, model_path: str, max_retries: int, wait_seconds: int, temperature: float, seed: int):
-        """
-        Args:
-            model_path (str): Huggingface hub model path or local model path.
-        """
-        super().__init__(model_path, max_retries, wait_seconds, temperature, seed)
+    def __init__(self, model_name: str, max_retries: int, wait_seconds: int, temperature: float, seed: int, model_path: str | None = None):
+        super().__init__(model_name, max_retries, wait_seconds, temperature, seed, model_path)
 
+        # Use local model if provided
+        model_path_to_use = self.model_path or self.model_name
         self.model = MllamaForConditionalGeneration.from_pretrained(
-            self.model_path,
+            model_path_to_use,
             torch_dtype=torch.bfloat16,
             device_map="auto",
         )
-        self.processor = AutoProcessor.from_pretrained(self.model_path)
+        self.processor = AutoProcessor.from_pretrained(model_path_to_use)
 
     def generate_response(self, conv: Conversation) -> str:
         # Take out images from messages

@@ -1,5 +1,6 @@
 import argparse
 from datetime import datetime
+import json
 from pathlib import Path
 from typing import Any, Literal
 
@@ -7,7 +8,7 @@ import streamlit as st
 from PIL import Image
 
 import llm
-from data import ContentImageMessage, ContentTextMessage, Conversation, Message
+from data import ChatSession, ContentImageMessage, ContentTextMessage, Conversation, Message
 
 
 def init_conv(add_init_image: bool = False) -> Conversation:
@@ -32,13 +33,14 @@ def get_llm_chat(_args: argparse.Namespace) -> llm.LLMChat:
         llm.LLMChat: The LLM chat object.
     """
     # Use _args instead of args so that streamlit does not hash the variable namespace object
-    model_kwargs = {
+    llm_kwargs = {
         "max_retries": _args.max_retries,
         "wait_seconds": _args.wait_seconds,
         "temperature": _args.temperature,
         "seed": _args.seed,
+        "model_path": _args.model_path,
     }
-    return llm.get_llm(_args.model_name, model_kwargs)
+    return llm.get_llm(_args.model_name, llm_kwargs)
 
 
 def display_chat(chat_history: Conversation) -> None:
@@ -87,8 +89,8 @@ def load_chat_from_path(file_path: str) -> None:
     if not Path(file_path).expanduser().exists():
         st.error(f"File does not exist: {file_path}")
         return
-    chat_history = Conversation.load_from_path(file_path)
-    st.session_state.chat_history = chat_history
+    chat_session = ChatSession.load_from_path(file_path)
+    st.session_state.chat_history = chat_session.conv
 
 
 def save_chat_to_path(file_path: str) -> None:
@@ -103,8 +105,12 @@ def save_chat_to_path(file_path: str) -> None:
     # If the file path does not have a .json extension, add it
     if Path(file_path).suffix != ".json":
         file_path += ".json"
-    conv: Conversation = st.session_state.chat_history
-    conv.save_to_path(file_path)
+    chat_session = ChatSession(
+        llm_name=st.session_state.llm_chat.model_name,
+        llm_kwargs=st.session_state.llm_chat.model_kwargs,
+        conv=st.session_state.chat_history
+    )
+    chat_session.save_to_path(file_path)
 
 
 def display_sidebar() -> None:
@@ -176,7 +182,7 @@ if __name__ == "__main__":
         choices=llm.SUPPORTED_LLM_NAMES,
         help="The name of the model to use",
     )
-    parser.add_argument("--model_local_path", type=str, default=None, help="Path to the model to use")
+    parser.add_argument("--model_path", type=str, default=None, help="Path to the model to use")
     parser.add_argument("--seed", type=int, default=0, help="Seed for the model")
     parser.add_argument("--max_retries", type=int, default=3, help="Maximum number of retries for the model")
     parser.add_argument("--wait_seconds", type=int, default=2, help="Wait time between retries in seconds")
