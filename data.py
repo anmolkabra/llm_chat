@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 import json
 from pathlib import Path
 from typing import Any, Literal
@@ -33,6 +34,7 @@ class ContentImageMessage(BaseModel):
 class Message(BaseModel):
     role: Literal["user", "assistant"]
     content: list[ContentTextMessage | ContentImageMessage]
+    created_at: datetime
 
 
 class Conversation(BaseModel):
@@ -68,4 +70,4 @@ class Conversation(BaseModel):
             file_path (str): Path to the JSON file.
         """
         with open(Path(file_path).expanduser(), "w") as f:
-            f.write(self.model_dump_json(indent=4))
+            f.write(self.model_dump_json(indent=2))

@@ -1,4 +1,5 @@
 import argparse
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal
 
@@ -10,11 +11,12 @@ from data import ContentImageMessage, ContentTextMessage, Conversation, Message
 
 
 def init_conv(add_init_image: bool = False) -> Conversation:
-    content = [ContentTextMessage(text="Hello!")]
+    content = []
     if add_init_image:
         image = Image.open("assets/Image.jpg")
         content.append(ContentImageMessage(image=image))
-    return Conversation(messages=[Message(role="user", content=content)])
+    messages: list[Message] = [] if not content else [Message(role="user", content=content, created_at=datetime.now())]
+    return Conversation(messages=messages)
 
 
 @st.cache_resource
@@ -64,7 +66,8 @@ def update_chat(role: Literal["user", "assistant"], text: str) -> None:
         role (Literal["user", "assistant"]): Either "user" or "assistant".
         text (str): Content of the message.
     """
-    st.session_state.chat_history.messages.append(Message(role=role, content=[ContentTextMessage(text=text)]))
+    new_message = Message(role=role, content=[ContentTextMessage(text=text)], created_at=datetime.now())
+    st.session_state.chat_history.messages.append(new_message)
 
 
 def clear_chat() -> None:
