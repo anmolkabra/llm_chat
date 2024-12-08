@@ -79,10 +79,12 @@ huggingface-cli login
 ./run_chat.sh --model_name meta-llama/Llama-3.2-11B-Vision-Instruct
 ```
 
-Now on your local machine (not on the cluster), open a new terminal and run `./scripts/forward_streamlit_port_slurm_to_mac.sh c0021`.
+Now on your local machine (not on the cluster), open a new terminal and run `./scripts/forward_streamlit_port_slurm_to_mac.sh aida c0021`.
+Here `aida` is a Host in my local machine's `~/.ssh/config`, or you can use any other Host cluster that you've setup in your SSH config.
+Otherwise, specify the `username@remote` such as `username@aida.cac.cornell.edu`.
+
 Then open http://localhost:8501 in your browser.
 This script forwards port 8501 from the compute node c0021 -> AIDA head node -> your laptop.
-You might need to need to change the `aida` in the SSH cmd in that script to `user@aida.cac.cornell.edu`.
 
 ## TODOs
 
