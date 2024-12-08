@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime
 import json
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal
 
@@ -59,7 +59,7 @@ class ChatSession(BaseModel):
         """
         with open(Path(file_path).expanduser(), "r") as f:
             data = json.load(f)
-        
+
         # TODO: Currently images that are deep-down in pydantic model are parsed
         # in the top-level ChatSession. As ChatSession becomes more complex, this
         # will be hard and unintuitive to maintain.

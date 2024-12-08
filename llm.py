@@ -17,7 +17,15 @@ from data import ContentImageMessage, ContentTextMessage, Conversation
 class LLMChat(abc.ABC):
     SUPPORTED_LLM_NAMES: list[str] = []
 
-    def __init__(self, model_name: str, max_retries: int, wait_seconds: int, temperature: float, seed: int, model_path: str | None = None):
+    def __init__(
+        self,
+        model_name: str,
+        max_retries: int,
+        wait_seconds: int,
+        temperature: float,
+        seed: int,
+        model_path: str | None = None,
+    ):
         """
         Initialize the LLM chat object.
 
@@ -29,7 +37,9 @@ class LLMChat(abc.ABC):
             seed (int): Seed for random number generator, passed to the model if applicable.
             model_path (Optional[str]): Local path to the model, defaults to None.
         """
-        assert model_name in self.SUPPORTED_LLM_NAMES, f"Model name {model_name} must be one of {self.SUPPORTED_LLM_NAMES}."
+        assert (
+            model_name in self.SUPPORTED_LLM_NAMES
+        ), f"Model name {model_name} must be one of {self.SUPPORTED_LLM_NAMES}."
         self.model_name = model_name
         self.max_retries = max_retries
         self.wait_seconds = wait_seconds
@@ -60,10 +70,18 @@ class LLMChat(abc.ABC):
 
 
 class CommonLLMChat(LLMChat):
-    def __init__(self, model_name: str, max_retries: int, wait_seconds: int, temperature: float, seed: int, model_path: str | None = None):
+    def __init__(
+        self,
+        model_name: str,
+        max_retries: int,
+        wait_seconds: int,
+        temperature: float,
+        seed: int,
+        model_path: str | None = None,
+    ):
         super().__init__(model_name, max_retries, wait_seconds, temperature, seed, model_path)
         self.client = None
-    
+
     @abc.abstractmethod
     def _call_api(self, messages_api_format: list[dict]) -> str:
         """
@@ -127,10 +145,18 @@ class OpenAIChat(CommonLLMChat):
         "gpt-4o-2024-11-20",
     ]
 
-    def __init__(self, model_name: str, max_retries: int, wait_seconds: int, temperature: float, seed: int, model_path: str | None = None):
+    def __init__(
+        self,
+        model_name: str,
+        max_retries: int,
+        wait_seconds: int,
+        temperature: float,
+        seed: int,
+        model_path: str | None = None,
+    ):
         super().__init__(model_name, max_retries, wait_seconds, temperature, seed, model_path)
         self.client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    
+
     def _call_api(self, messages_api_format: list[dict]) -> str:
         # https://platform.openai.com/docs/api-reference/introduction
         completion = self.client.chat.completions.create(
@@ -150,7 +176,15 @@ class TogetherChat(OpenAIChat):
         "together:meta-llama/Llama-Vision-Free",
     ]
 
-    def __init__(self, model_name: str, max_retries: int, wait_seconds: int, temperature: float, seed: int, model_path: str | None = None):
+    def __init__(
+        self,
+        model_name: str,
+        max_retries: int,
+        wait_seconds: int,
+        temperature: float,
+        seed: int,
+        model_path: str | None = None,
+    ):
         assert model_name.startswith("together:"), "model_name must start with 'together:'"
         super().__init__(model_name, max_retries, wait_seconds, temperature, seed, model_path)
         self.client = together.Together(api_key=os.getenv("TOGETHER_API_KEY"))
@@ -159,7 +193,7 @@ class TogetherChat(OpenAIChat):
         # https://github.com/togethercomputer/together-python
         # Remove the "together:" prefix before setting up the client
         completion = self.client.chat.completions.create(
-            model=self.model_name[len("together:"):],
+            model=self.model_name[len("together:") :],
             messages=messages_api_format,
             temperature=self.temperature,
             seed=self.seed,
@@ -173,10 +207,18 @@ class AnthropicChat(CommonLLMChat):
         "claude-3-5-sonnet-20241022",
     ]
 
-    def __init__(self, model_name: str, max_retries: int, wait_seconds: int, temperature: float, seed: int, model_path: str | None = None):
+    def __init__(
+        self,
+        model_name: str,
+        max_retries: int,
+        wait_seconds: int,
+        temperature: float,
+        seed: int,
+        model_path: str | None = None,
+    ):
         super().__init__(model_name, max_retries, wait_seconds, temperature, seed, model_path)
         self.client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-    
+
     def _call_api(self, messages_api_format: list[dict]) -> str:
         # https://docs.anthropic.com/en/api/migrating-from-text-completions-to-messages
         response = self.client.messages.create(
@@ -192,12 +234,20 @@ class OllamaChat(CommonLLMChat):
         "ollama:llama3.2:1b",
     ]
 
-    def __init__(self, model_name: str, max_retries: int, wait_seconds: int, temperature: float, seed: int, model_path: str | None = None):
+    def __init__(
+        self,
+        model_name: str,
+        max_retries: int,
+        wait_seconds: int,
+        temperature: float,
+        seed: int,
+        model_path: str | None = None,
+    ):
         assert model_name.startswith("ollama:"), "model_name must start with 'ollama:'"
         super().__init__(model_name, max_retries, wait_seconds, temperature, seed, model_path)
         self.ollama_headers: dict = {}
         self.client = ollama.Client(
-            host='http://localhost:11434',
+            host="http://localhost:11434",
             headers=self.ollama_headers,
         )
 
@@ -221,14 +271,13 @@ class OllamaChat(CommonLLMChat):
                     # TODO figure out image parsing
         return formatted_messages
 
-
     def _call_api(self, messages_api_format: list[dict]) -> str:
         options = dict(
             temperature=self.temperature,
         )
         # Remove the "ollama:" prefix before setting up the client
         response = self.client.chat(
-            model=self.model_name[len("ollama:"):],
+            model=self.model_name[len("ollama:") :],
             messages=messages_api_format,
             options=options,
         )
@@ -242,7 +291,15 @@ class LocalLlamaChat(LLMChat):
         "meta-llama/Llama-3.2-11B-Vision-Instruct",
     ]
 
-    def __init__(self, model_name: str, max_retries: int, wait_seconds: int, temperature: float, seed: int, model_path: str | None = None):
+    def __init__(
+        self,
+        model_name: str,
+        max_retries: int,
+        wait_seconds: int,
+        temperature: float,
+        seed: int,
+        model_path: str | None = None,
+    ):
         super().__init__(model_name, max_retries, wait_seconds, temperature, seed, model_path)
 
         # Use local model if provided
@@ -286,7 +343,14 @@ class LocalLlamaChat(LLMChat):
         return latest_assistant_message
 
 
-SUPPORTED_LLM_NAMES: list[str] = OpenAIChat.SUPPORTED_LLM_NAMES + TogetherChat.SUPPORTED_LLM_NAMES + AnthropicChat.SUPPORTED_LLM_NAMES + OllamaChat.SUPPORTED_LLM_NAMES + LocalLlamaChat.SUPPORTED_LLM_NAMES
+SUPPORTED_LLM_NAMES: list[str] = (
+    OpenAIChat.SUPPORTED_LLM_NAMES
+    + TogetherChat.SUPPORTED_LLM_NAMES
+    + AnthropicChat.SUPPORTED_LLM_NAMES
+    + OllamaChat.SUPPORTED_LLM_NAMES
+    + LocalLlamaChat.SUPPORTED_LLM_NAMES
+)
+
 
 def get_llm(model_name: str, model_kwargs: dict) -> LLMChat:
     match model_name:

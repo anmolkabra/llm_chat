@@ -1,8 +1,7 @@
 import argparse
 from datetime import datetime
-import json
 from pathlib import Path
-from typing import Any, Literal
+from typing import Literal
 
 import streamlit as st
 from PIL import Image
@@ -108,7 +107,7 @@ def save_chat_to_path(file_path: str) -> None:
     chat_session = ChatSession(
         llm_name=st.session_state.llm_chat.model_name,
         llm_kwargs=st.session_state.llm_chat.model_kwargs,
-        conv=st.session_state.chat_history
+        conv=st.session_state.chat_history,
     )
     chat_session.save_to_path(file_path)
 
@@ -186,12 +185,16 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=0, help="Seed for the model")
     parser.add_argument("--max_retries", type=int, default=3, help="Maximum number of retries for the model")
     parser.add_argument("--wait_seconds", type=int, default=2, help="Wait time between retries in seconds")
-    parser.add_argument("--temperature", type=float, default=0., help="Temperature for the model's response generation")
+    parser.add_argument(
+        "--temperature", type=float, default=0.0, help="Temperature for the model's response generation"
+    )
     args = parser.parse_args()
 
     # Initialize conversation and LLM
     is_model_llama = args.model_name in llm.LocalLlamaChat.SUPPORTED_LLM_NAMES
-    chat_history = init_conv(add_init_image=is_model_llama) # HACK Feed an image at the beginning. Otherwise llama complains
+    chat_history = init_conv(
+        add_init_image=is_model_llama
+    )  # HACK Feed an image at the beginning. Otherwise llama complains
     llm_chat: llm.LLMChat = get_llm_chat(args)
 
     if "llm_chat" not in st.session_state:
