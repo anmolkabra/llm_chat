@@ -35,21 +35,21 @@ You can add your to the list and the UI will recognize that as an option.
 You'll need to set `$OPENAI_API_KEY` environment variable.
 Then, on your machine,
 ```bash
-make RUN_FLAGS="--model_name gpt-4o-mini-2024-07-18" run
+./run_chat.sh --model_name gpt-4o-mini-2024-07-18
 ```
 
 ### Together.ai models
 You'll need to set `$TOGETHER_API_KEY` environment variable.
 Then, on your machine,
 ```bash
-make RUN_FLAGS="--model_name together:meta-llama/Llama-Vision-Free" run
+./run_chat.sh --model_name together:meta-llama/Llama-Vision-Free
 ```
 
 ### Anthropic models
 You'll need to set `$ANTHROPIC_API_KEY` environment variable.
 Then, on your machine,
 ```bash
-make RUN_FLAGS="--model_name claude-3-5-sonnet-20241022" run
+./run_chat.sh --model_name claude-3-5-sonnet-20241022
 ```
 
 ### Ollama models
@@ -61,7 +61,7 @@ ollama pull llama3.2:1b
 
 Then use the same model name with `"ollama:"` prefix to run in the UI:
 ```bash
-make RUN_FLAGS="--model_name ollama:llama3.2:1b" run
+./run_chat.sh --model_name ollama:llama3.2:1b
 ```
 
 ### Local Llama through Huggingface
@@ -72,11 +72,11 @@ Then, on the compute node,
 ```bash
 # If you have already downloaded Llama 3.2 to a local directory
 export LLAMA_MODEL_PATH=/mnt/beegfs/bulk/mirror/localllama/localLlama-3.2-11B-Vision-Instruct
-make RUN_FLAGS="--model_name meta-llama/Llama-3.2-11B-Vision-Instruct --model_local_path $LLAMA_MODEL_PATH" run
+./run_chat.sh --model_name meta-llama/Llama-3.2-11B-Vision-Instruct --model_local_path $LLAMA_MODEL_PATH
 
 # If not downloaded, ask huggingface to download for you
 huggingface-cli login
-make RUN_FLAGS="--model_name meta-llama/Llama-3.2-11B-Vision-Instruct" run
+./run_chat.sh --model_name meta-llama/Llama-3.2-11B-Vision-Instruct
 ```
 
 Now on your local machine (not on the cluster), open a new terminal and run `./scripts/forward_streamlit_port_slurm_to_mac.sh c0021`.

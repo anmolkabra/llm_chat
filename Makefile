@@ -1,5 +1,3 @@
-.DEFAULT_GOAL := run
-
 # Define the directory to search in
 SEARCH_STRING := "openai"
 SEARCH_DIR := .
@@ -56,13 +54,7 @@ fix-lint-file:
 	ruff check --fix $(FILE)
 	ruff format $(FILE)
 
-# Add this to your default or all target if you want it to run automatically
 all: lint
-
-# Run Streamlit app
-RUN_FLAGS :=
-run:
-	streamlit run ui.py -- $(RUN_FLAGS);
 
 # Phony targets
 .PHONY: lint lint-file fix-lint fix-lint-file all
