@@ -2,6 +2,7 @@ import abc
 import os
 
 import anthropic
+import ollama
 import openai
 import together
 import torch
@@ -167,7 +168,7 @@ class TogetherChat(OpenAIChat):
 
         # Remove the "together:" prefix before setting up the client
         completion = self.client.chat.completions.create(
-            model=self.model_name.lstrip("together:"),
+            model=self.model_name[len("together:"):],
             messages=formatted_messages,
             temperature=self.temperature,
             seed=self.seed,
@@ -256,7 +257,56 @@ class LocalLlamaChat(LLMChat):
         return latest_assistant_message
 
 
-SUPPORTED_LLM_NAMES: list[str] = OpenAIChat.SUPPORTED_LLM_NAMES + TogetherChat.SUPPORTED_LLM_NAMES + AnthropicChat.SUPPORTED_LLM_NAMES + LlamaChat.SUPPORTED_LLM_NAMES + 
+class OllamaChat(CommonLLMChat):
+    SUPPORTED_LLM_NAMES: list[str] = [
+        "ollama:llama3.2:1b",
+    ]
+
+    def __init__(self, model_name: str, max_retries: int, wait_seconds: int, temperature: float, seed: int):
+        assert model_name.startswith("ollama:"), "model_name must start with 'ollama:'"
+        super().__init__(model_name, max_retries, wait_seconds, temperature, seed)
+        self.ollama_headers: dict = {}
+        self.client = ollama.Client(
+            host='http://localhost:11434',
+            headers=self.ollama_headers,
+        )
+
+    def convert_conv_to_common_format(self, conv: Conversation) -> list[dict]:
+        """
+        Converts conv into the following format and calls the Ollama client.
+        ```
+        [
+            {"role": role1, "content": text1},
+            {"role": role2, "content": text2},
+            {"role": role3, "content": text3},
+        ]
+        ```
+        """
+        formatted_messages = []
+        for message in conv.messages:
+            for content in message.content:
+                match content:
+                    case ContentTextMessage(text=text):
+                        formatted_messages.append({"role": message.role, "content": text})
+                    # TODO figure out image parsing
+        return formatted_messages
+
+
+    def _call_api(self, conv: Conversation) -> str:
+        # Remove the "ollama:" prefix before setting up the client
+        formatted_messages = self.convert_conv_to_common_format(conv)
+        options = dict(
+            temperature=self.temperature,
+        )
+        response = self.client.chat(
+            model=self.model_name[len("ollama:"):],
+            messages=formatted_messages,
+            options=options,
+        )
+        return response.message.content
+
+
+SUPPORTED_LLM_NAMES: list[str] = OpenAIChat.SUPPORTED_LLM_NAMES + TogetherChat.SUPPORTED_LLM_NAMES + AnthropicChat.SUPPORTED_LLM_NAMES + LocalLlamaChat.SUPPORTED_LLM_NAMES + OllamaChat.SUPPORTED_LLM_NAMES
 
 def get_llm(model_name: str, model_kwargs: dict) -> LLMChat:
     match model_name:
@@ -271,5 +321,7 @@ def get_llm(model_name: str, model_kwargs: dict) -> LLMChat:
             if "temperature" in model_kwargs:
                 model_kwargs["temperature"] = max(0.01, model_kwargs["temperature"])
             return LocalLlamaChat(model_name=model_name, **model_kwargs)
+        case model_name if model_name in OllamaChat.SUPPORTED_LLM_NAMES:
+            return OllamaChat(model_name=model_name, **model_kwargs)
         case _:
             raise ValueError(f"Model name {model_name} must be one of {SUPPORTED_LLM_NAMES}.")
