@@ -183,7 +183,9 @@ if __name__ == "__main__":
         help="The name of the model to use",
     )
     parser.add_argument("--model_path", type=str, default=None, help="Path to the model to use")
-    parser.add_argument("--max_tokens", type=int, default=4096, help="Maximum number of tokens for the model's response")
+    parser.add_argument(
+        "--max_tokens", type=int, default=4096, help="Maximum number of tokens for the model's response"
+    )
     parser.add_argument(
         "--temperature", type=float, default=0.0, help="Temperature for the model's response generation"
     )
