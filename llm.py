@@ -20,39 +20,49 @@ class LLMChat(abc.ABC):
     def __init__(
         self,
         model_name: str,
-        max_retries: int,
-        wait_seconds: int,
-        temperature: float,
-        seed: int,
         model_path: str | None = None,
+        max_tokens: int = 4096,
+        temperature: float = 0.,
+        seed: int = 0,
+        max_retries: int = 3,
+        wait_seconds: int = 2,
     ):
         """
         Initialize the LLM chat object.
 
         Args:
             model_name (str): The model name to use.
-            max_retries (int): Max number of API calls allowed before giving up.
-            wait_seconds (int): Number of seconds to wait between API calls.
-            temperature (float): Temperature parameter for sampling.
-            seed (int): Seed for random number generator, passed to the model if applicable.
-            model_path (Optional[str]): Local path to the model, defaults to None.
+            model_path (Optional[str]): Local path to the model.
+                Defaults to None.
+            max_tokens (int): Maximum number of tokens to generate.
+                Defaults to 4096.
+            temperature (Optional[float]): Temperature parameter for sampling.
+                Defaults to 0.0.
+            seed (Optional[int]): Seed for random number generator, passed to the model if applicable.
+                Defaults to 0.
+            max_retries (Optional[int]): Max number of API calls allowed before giving up.
+                Defaults to 3.
+            wait_seconds (Optional[int]): Number of seconds to wait between API calls.
+                Defaults to 2.
         """
         assert (
             model_name in self.SUPPORTED_LLM_NAMES
         ), f"Model name {model_name} must be one of {self.SUPPORTED_LLM_NAMES}."
         self.model_name = model_name
-        self.max_retries = max_retries
-        self.wait_seconds = wait_seconds
+        self.model_path = model_path
+        self.max_tokens = max_tokens
         self.temperature = temperature
         self.seed = seed
-        self.model_path = model_path
+        self.max_retries = max_retries
+        self.wait_seconds = wait_seconds
 
         self.model_kwargs = dict(
-            max_retries=max_retries,
-            wait_seconds=wait_seconds,
+            model_path=model_path,
+            max_tokens=max_tokens,
             temperature=temperature,
             seed=seed,
-            model_path=model_path,
+            max_retries=max_retries,
+            wait_seconds=wait_seconds,
         )
 
     @abc.abstractmethod
@@ -73,13 +83,14 @@ class CommonLLMChat(LLMChat):
     def __init__(
         self,
         model_name: str,
-        max_retries: int,
-        wait_seconds: int,
-        temperature: float,
-        seed: int,
         model_path: str | None = None,
+        max_tokens: int = 4096,
+        temperature: float = 0.,
+        seed: int = 0,
+        max_retries: int = 3,
+        wait_seconds: int = 2,
     ):
-        super().__init__(model_name, max_retries, wait_seconds, temperature, seed, model_path)
+        super().__init__(model_name, model_path, max_tokens, temperature, seed, max_retries, wait_seconds)
         self.client = None
 
     @abc.abstractmethod
@@ -148,13 +159,14 @@ class OpenAIChat(CommonLLMChat):
     def __init__(
         self,
         model_name: str,
-        max_retries: int,
-        wait_seconds: int,
-        temperature: float,
-        seed: int,
         model_path: str | None = None,
+        max_tokens: int = 4096,
+        temperature: float = 0.,
+        seed: int = 0,
+        max_retries: int = 3,
+        wait_seconds: int = 2,
     ):
-        super().__init__(model_name, max_retries, wait_seconds, temperature, seed, model_path)
+        super().__init__(model_name, model_path, max_tokens, temperature, seed, max_retries, wait_seconds)
         self.client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
     def _call_api(self, messages_api_format: list[dict]) -> str:
@@ -163,6 +175,7 @@ class OpenAIChat(CommonLLMChat):
             model=self.model_name,
             messages=messages_api_format,
             temperature=self.temperature,
+            max_completion_tokens=self.max_tokens,
             seed=self.seed,
         )
         return completion.choices[0].message.content
@@ -179,14 +192,15 @@ class TogetherChat(OpenAIChat):
     def __init__(
         self,
         model_name: str,
-        max_retries: int,
-        wait_seconds: int,
-        temperature: float,
-        seed: int,
         model_path: str | None = None,
+        max_tokens: int = 4096,
+        temperature: float = 0.,
+        seed: int = 0,
+        max_retries: int = 3,
+        wait_seconds: int = 2,
     ):
         assert model_name.startswith("together:"), "model_name must start with 'together:'"
-        super().__init__(model_name, max_retries, wait_seconds, temperature, seed, model_path)
+        super().__init__(model_name, model_path, max_tokens, temperature, seed, max_retries, wait_seconds)
         self.client = together.Together(api_key=os.getenv("TOGETHER_API_KEY"))
 
     def _call_api(self, messages_api_format: list[dict]) -> str:
@@ -197,6 +211,7 @@ class TogetherChat(OpenAIChat):
             messages=messages_api_format,
             temperature=self.temperature,
             seed=self.seed,
+            max_tokens=self.max_tokens,
         )
         return completion.choices[0].message.content
 
@@ -210,13 +225,14 @@ class AnthropicChat(CommonLLMChat):
     def __init__(
         self,
         model_name: str,
-        max_retries: int,
-        wait_seconds: int,
-        temperature: float,
-        seed: int,
         model_path: str | None = None,
+        max_tokens: int = 4096,
+        temperature: float = 0.,
+        seed: int = 0,
+        max_retries: int = 3,
+        wait_seconds: int = 2,
     ):
-        super().__init__(model_name, max_retries, wait_seconds, temperature, seed, model_path)
+        super().__init__(model_name, model_path, max_tokens, temperature, seed, max_retries, wait_seconds)
         self.client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
     def _call_api(self, messages_api_format: list[dict]) -> str:
@@ -224,6 +240,7 @@ class AnthropicChat(CommonLLMChat):
         response = self.client.messages.create(
             model=self.model_name,
             messages=messages_api_format,
+            max_tokens=self.max_tokens,
             temperature=self.temperature,
         )
         return response.content[0].text
@@ -237,14 +254,15 @@ class OllamaChat(CommonLLMChat):
     def __init__(
         self,
         model_name: str,
-        max_retries: int,
-        wait_seconds: int,
-        temperature: float,
-        seed: int,
         model_path: str | None = None,
+        max_tokens: int = 4096,
+        temperature: float = 0.,
+        seed: int = 0,
+        max_retries: int = 3,
+        wait_seconds: int = 2,
     ):
         assert model_name.startswith("ollama:"), "model_name must start with 'ollama:'"
-        super().__init__(model_name, max_retries, wait_seconds, temperature, seed, model_path)
+        super().__init__(model_name, model_path, max_tokens, temperature, seed, max_retries, wait_seconds)
         self.ollama_headers: dict = {}
         self.client = ollama.Client(
             host="http://localhost:11434",
@@ -294,13 +312,14 @@ class LocalLlamaChat(LLMChat):
     def __init__(
         self,
         model_name: str,
-        max_retries: int,
-        wait_seconds: int,
-        temperature: float,
-        seed: int,
         model_path: str | None = None,
+        max_tokens: int = 4096,
+        temperature: float = 0.,
+        seed: int = 0,
+        max_retries: int = 3,
+        wait_seconds: int = 2,
     ):
-        super().__init__(model_name, max_retries, wait_seconds, temperature, seed, model_path)
+        super().__init__(model_name, model_path, max_tokens, temperature, seed, max_retries, wait_seconds)
 
         # Use local model if provided
         model_path_to_use = self.model_path or self.model_name
@@ -331,7 +350,7 @@ class LocalLlamaChat(LLMChat):
 
         # Generate and decode
         outputs = self.model.generate(
-            **inputs, temperature=self.temperature, max_new_tokens=1024
+            **inputs, temperature=self.temperature, max_new_tokens=self.max_tokens
         )  # shape (1, output_length)
         decoded_output = self.processor.decode(outputs[0])
         user_assistant_alternate_messages: list[str] = decoded_output.split("assistant<|end_header_id|>")

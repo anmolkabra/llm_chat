@@ -33,11 +33,12 @@ def get_llm_chat(_args: argparse.Namespace) -> llm.LLMChat:
     """
     # Use _args instead of args so that streamlit does not hash the variable namespace object
     llm_kwargs = {
-        "max_retries": _args.max_retries,
-        "wait_seconds": _args.wait_seconds,
+        "model_path": _args.model_path,
+        "max_tokens": _args.max_tokens,
         "temperature": _args.temperature,
         "seed": _args.seed,
-        "model_path": _args.model_path,
+        "max_retries": _args.max_retries,
+        "wait_seconds": _args.wait_seconds,
     }
     return llm.get_llm(_args.model_name, llm_kwargs)
 
@@ -182,12 +183,13 @@ if __name__ == "__main__":
         help="The name of the model to use",
     )
     parser.add_argument("--model_path", type=str, default=None, help="Path to the model to use")
-    parser.add_argument("--seed", type=int, default=0, help="Seed for the model")
-    parser.add_argument("--max_retries", type=int, default=3, help="Maximum number of retries for the model")
-    parser.add_argument("--wait_seconds", type=int, default=2, help="Wait time between retries in seconds")
+    parser.add_argument("--max_tokens", type=int, default=4096, help="Maximum number of tokens for the model's response")
     parser.add_argument(
         "--temperature", type=float, default=0.0, help="Temperature for the model's response generation"
     )
+    parser.add_argument("--seed", type=int, default=0, help="Seed for the model")
+    parser.add_argument("--max_retries", type=int, default=3, help="Maximum number of retries for the model")
+    parser.add_argument("--wait_seconds", type=int, default=2, help="Wait time between retries in seconds")
     args = parser.parse_args()
 
     # Initialize conversation and LLM
