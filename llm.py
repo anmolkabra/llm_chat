@@ -248,7 +248,7 @@ class AnthropicChat(CommonLLMChat):
 
 class OllamaChat(CommonLLMChat):
     SUPPORTED_LLM_NAMES: list[str] = [
-        "ollama:llama3.2:1b",
+        f"ollama:{m_cls.model}" for m_cls in ollama.list().models
     ]
 
     def __init__(
