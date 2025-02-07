@@ -1,5 +1,7 @@
 # A Simple Chat Interface for LLMs
 
+![Chat Interface Demo](assets/llm_chat_readme.gif)
+
 See `llm/__init__.py` for a list of supported LLM names.
 
 ## Installation
