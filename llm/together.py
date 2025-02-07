@@ -20,11 +20,9 @@ class TogetherChat(CommonLLMChat):
         max_tokens: int = 4096,
         temperature: float = 0.0,
         seed: int = 0,
-        max_retries: int = 3,
-        wait_seconds: int = 2,
     ):
         assert model_name.startswith("together:"), "model_name must start with 'together:'"
-        super().__init__(model_name, model_path, max_tokens, temperature, seed, max_retries, wait_seconds)
+        super().__init__(model_name, model_path, max_tokens, temperature, seed)
         self.client = together.Together(api_key=os.getenv("TOGETHER_API_KEY"))
 
     def _call_api(self, messages_api_format: list[dict]) -> str:

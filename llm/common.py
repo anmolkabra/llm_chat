@@ -1,7 +1,5 @@
 import abc
 
-from tenacity import retry, stop_after_attempt, wait_fixed
-
 import files
 from _types import ContentImageMessage, ContentTextMessage, Conversation
 
@@ -16,8 +14,6 @@ class LLMChat(abc.ABC):
         max_tokens: int = 4096,
         temperature: float = 0.0,
         seed: int = 0,
-        max_retries: int = 3,
-        wait_seconds: int = 2,
     ):
         """
         Initialize the LLM chat object.
@@ -32,10 +28,6 @@ class LLMChat(abc.ABC):
                 Defaults to 0.0.
             seed (Optional[int]): Seed for random number generator, passed to the model if applicable.
                 Defaults to 0.
-            max_retries (Optional[int]): Max number of API calls allowed before giving up.
-                Defaults to 3.
-            wait_seconds (Optional[int]): Number of seconds to wait between API calls.
-                Defaults to 2.
         """
         assert (
             model_name in self.SUPPORTED_LLM_NAMES
@@ -45,16 +37,12 @@ class LLMChat(abc.ABC):
         self.max_tokens = max_tokens
         self.temperature = temperature
         self.seed = seed
-        self.max_retries = max_retries
-        self.wait_seconds = wait_seconds
 
         self.model_kwargs = dict(
             model_path=model_path,
             max_tokens=max_tokens,
             temperature=temperature,
             seed=seed,
-            max_retries=max_retries,
-            wait_seconds=wait_seconds,
         )
 
     @abc.abstractmethod
@@ -79,10 +67,8 @@ class CommonLLMChat(LLMChat):
         max_tokens: int = 4096,
         temperature: float = 0.0,
         seed: int = 0,
-        max_retries: int = 3,
-        wait_seconds: int = 2,
     ):
-        super().__init__(model_name, model_path, max_tokens, temperature, seed, max_retries, wait_seconds)
+        super().__init__(model_name, model_path, max_tokens, temperature, seed)
         self.client = None
 
     @abc.abstractmethod
@@ -132,11 +118,5 @@ class CommonLLMChat(LLMChat):
         """
         assert self.client is not None, "Client is not initialized."
 
-        # max_retries and wait_seconds are object attributes, and cannot be written around the generate_response function
-        # So we need to wrap the _call_api function with the retry decorator
-        @retry(stop=stop_after_attempt(self.max_retries), wait=wait_fixed(self.wait_seconds))
-        def _call_api_wrapper(conv: Conversation) -> str:
-            messages_api_format: list[dict] = self._convert_conv_to_api_format(conv)
-            return self._call_api(messages_api_format)
-
-        return _call_api_wrapper(conv)
+        messages_api_format: list[dict] = self._convert_conv_to_api_format(conv)
+        return self._call_api(messages_api_format)

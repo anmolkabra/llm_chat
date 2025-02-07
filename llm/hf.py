@@ -20,10 +20,8 @@ class HuggingfaceChat(LLMChat):
         max_tokens: int = 4096,
         temperature: float = 0.0,
         seed: int = 0,
-        max_retries: int = 3,
-        wait_seconds: int = 2,
     ):
-        super().__init__(model_name, model_path, max_tokens, temperature, seed, max_retries, wait_seconds)
+        super().__init__(model_name, model_path, max_tokens, temperature, seed)
 
         # Use local model if provided
         model_path_to_use = self.model_path or self.model_name

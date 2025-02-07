@@ -14,11 +14,9 @@ class OllamaChat(CommonLLMChat):
         max_tokens: int = 4096,
         temperature: float = 0.0,
         seed: int = 0,
-        max_retries: int = 3,
-        wait_seconds: int = 2,
     ):
         assert model_name.startswith("ollama:"), "model_name must start with 'ollama:'"
-        super().__init__(model_name, model_path, max_tokens, temperature, seed, max_retries, wait_seconds)
+        super().__init__(model_name, model_path, max_tokens, temperature, seed)
         self.ollama_headers: dict = {}
         self.client = ollama.Client(
             host="http://localhost:11434",

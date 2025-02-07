@@ -37,8 +37,6 @@ def get_llm_chat(_args: argparse.Namespace) -> llm.LLMChat:
         "max_tokens": _args.max_tokens,
         "temperature": _args.temperature,
         "seed": _args.seed,
-        "max_retries": _args.max_retries,
-        "wait_seconds": _args.wait_seconds,
     }
     return llm.get_llm(_args.model_name, llm_kwargs)
 
@@ -190,8 +188,6 @@ if __name__ == "__main__":
         "--temperature", type=float, default=0.0, help="Temperature for the model's response generation"
     )
     parser.add_argument("--seed", type=int, default=0, help="Seed for the model")
-    parser.add_argument("--max_retries", type=int, default=3, help="Maximum number of retries for the model")
-    parser.add_argument("--wait_seconds", type=int, default=2, help="Wait time between retries in seconds")
     args = parser.parse_args()
 
     # Initialize conversation and LLM
