@@ -7,7 +7,7 @@ import streamlit as st
 from PIL import Image
 
 import llm
-from data import ChatSession, ContentImageMessage, ContentTextMessage, Conversation, Message
+from _types import ChatSession, ContentImageMessage, ContentTextMessage, Conversation, Message
 
 
 def init_conv(add_init_image: bool = False) -> Conversation:
@@ -195,10 +195,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Initialize conversation and LLM
-    is_model_llama = args.model_name in llm.LocalLlamaChat.SUPPORTED_LLM_NAMES
-    chat_history = init_conv(
-        add_init_image=is_model_llama
-    )  # HACK Feed an image at the beginning. Otherwise llama complains
+    # TODO Add image to chat history -- some HF models complain
+    # HACK Feed an image at the beginning. Otherwise llama complains
+    # is_hf_model = args.model_name in llm.HuggingfaceChat.SUPPORTED_LLM_NAMES
+    is_hf_model = False
+    chat_history = init_conv(add_init_image=is_hf_model)
     llm_chat: llm.LLMChat = get_llm_chat(args)
 
     if "llm_chat" not in st.session_state:
