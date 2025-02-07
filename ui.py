@@ -41,6 +41,16 @@ def get_llm_chat(_args: argparse.Namespace) -> llm.LLMChat:
     return llm.get_llm(_args.model_name, llm_kwargs)
 
 
+def format_md_text(text: str) -> str:
+    """
+    Formats text for markdown display:
+    - Encloses <think>...</think> in a blockquote.
+    """
+    # Replace <think>...</think> with blockquote
+    text = text.replace("<think>", "<blockquote>").replace("</think>", "</blockquote>")
+    return text
+
+
 def display_chat(chat_history: Conversation) -> None:
     """
     Display the chat history in the chat message container.
@@ -53,7 +63,8 @@ def display_chat(chat_history: Conversation) -> None:
             for content in message.content:
                 match content:
                     case ContentTextMessage(text=text):
-                        st.markdown(text)
+                        formatted_text = format_md_text(text)
+                        st.markdown(formatted_text, unsafe_allow_html=True)
                     case ContentImageMessage(image=image):
                         st.image(image, use_container_width=True)
 
@@ -165,7 +176,8 @@ def ui_main(args: argparse.Namespace) -> None:
         # Generate assistant response
         with st.chat_message("assistant"):
             response = llm_chat.generate_response(st.session_state.chat_history)
-            st.write(response)
+            formatted_text = format_md_text(response)
+            st.markdown(formatted_text, unsafe_allow_html=True)
 
         # Add assistant response to chat history
         update_chat(role="assistant", text=response)
