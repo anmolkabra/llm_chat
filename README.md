@@ -2,6 +2,11 @@
 
 ![Chat Interface Demo](assets/llm_chat_readme.gif)
 
+Spin up your own chat interface locally with
+```bash
+./scripts/run_chat.sh --model_name gpt-4o-mini-2024-07-18
+```
+
 See `llm/__init__.py` for a list of supported LLM names.
 
 ## Installation
