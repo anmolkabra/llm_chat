@@ -40,20 +40,6 @@ class LLMChat(abc.ABC):
             seed=seed,
         )
 
-    @staticmethod
-    @abc.abstractmethod
-    def is_model_supported(model_name: str) -> bool:
-        """
-        Check if the model name is supported by the LLM chat object.
-
-        Args:
-            model_name (str): The model name to check.
-
-        Returns:
-            bool: True if the model name is supported, False otherwise.
-        """
-        pass
-
     @abc.abstractmethod
     def generate_response(self, conv: Conversation) -> str:
         """

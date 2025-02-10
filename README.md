@@ -4,7 +4,7 @@
 
 Spin up your own chat interface locally with
 ```bash
-./scripts/run_chat.sh --model_name gpt-4o-mini-2024-07-18
+./scripts/run_chat.sh --server openai --model_name gpt-4o-mini-2024-07-18
 ```
 
 See `llm/__init__.py` for a list of supported LLM names.
@@ -26,22 +26,23 @@ pip install -r requirements-mac.txt
 
 ## Run the Chat interface
 
-It is super easy to add your own LLM provider by making simple changes to `llm/*`.
-Currently the code supports the following LLM providers out-of-the-box:
+It is super easy to add your own LLM server by making simple changes to `llm/*`.
+Currently the code supports the following LLM servers out-of-the-box:
 - OpenAI
 - Together.ai
 - Anthropic
 - Ollama
 - Huggingface models
 
-See the list of models supported for these LLM providers in `llm/*.py` in the `<LLM_PROVIDER>.SUPPORTED_LLM_NAMES` list.
-You can add your to the list and the UI will recognize that as an option.
+See the list of LLM servers in `llm/__init__.py`.
+You can add your server to the list and create a corresponding `YourServerLLMChat(LLMChat)`
+and the UI will recognize that as an option.
 
 ### LLMs through API access
 
 To run the `gpt-4o-mini-2024-07-18` model from OpenAI, for example, do the following steps in a terminal:
 1. Set the `$OPENAI_API_KEY` environment variable with your API key.
-2. Run `./scripts/run_chat.sh --model_name gpt-4o-mini-2024-07-18`.
+2. Run `./scripts/run_chat.sh --server openai --model_name gpt-4o-mini-2024-07-18`.
 3. Open the website link in a browser and start chatting!
 
 Analogously, run Together.ai and Anthropic models after setting `$TOGETHER_API_KEY` and `$ANTHROPIC_API_KEY` respectively.
@@ -53,9 +54,9 @@ After downloading the software and setting up the CLI interface, you can downloa
 ollama pull llama3.2:1b
 ```
 
-Then use the same model name with `"ollama:"` prefix to run in the UI:
+Then use the same model name to run the UI:
 ```bash
-./scripts/run_chat.sh --model_name ollama:llama3.2:1b
+./scripts/run_chat.sh --server ollama --model_name ollama:llama3.2:1b
 ```
 
 ### LLMs through Huggingface

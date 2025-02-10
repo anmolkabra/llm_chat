@@ -20,10 +20,6 @@ class OllamaChat(CommonLLMChat):
             headers=self.ollama_headers,
         )
 
-    @staticmethod
-    def is_model_supported(model_name: str) -> bool:
-        return model_name.startswith("ollama:")
-
     def _convert_conv_to_api_format(self, conv: Conversation) -> list[dict]:
         """
         Converts conv into the following format and calls the Ollama client.
@@ -50,7 +46,7 @@ class OllamaChat(CommonLLMChat):
         )
         # Remove the "ollama:" prefix before setting up the client
         response = self.client.chat(
-            model=self.model_name[len("ollama:") :],
+            model=self.model_name,
             messages=messages_api_format,
             options=options,
         )

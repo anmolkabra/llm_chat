@@ -7,7 +7,7 @@ import streamlit as st
 from PIL import Image
 
 from _types import ChatSession, ContentImageMessage, ContentTextMessage, Conversation, Message
-from llm import get_llm
+from llm import SUPPORTED_LLM_SERVERS, get_llm
 from llm.common import LLMChat
 
 
@@ -39,7 +39,7 @@ def get_llm_chat(_args: argparse.Namespace) -> LLMChat:
         "temperature": _args.temperature,
         "seed": _args.seed,
     }
-    return get_llm(_args.model_name, llm_kwargs)
+    return get_llm(_args.server, _args.model_name, llm_kwargs)
 
 
 def format_md_text(text: str) -> str:
@@ -187,9 +187,16 @@ def ui_main(args: argparse.Namespace) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Chat with Assistant")
     parser.add_argument(
+        "--server",
+        type=str,
+        default="together",
+        choices=SUPPORTED_LLM_SERVERS,
+        help="The server to use for the assistant",
+    )
+    parser.add_argument(
         "--model_name",
         type=str,
-        default="together:meta-llama/Llama-Vision-Free",
+        default="meta-llama/Llama-Vision-Free",
         help="The name of the model to use",
     )
     parser.add_argument("--model_path", type=str, default=None, help="Path to the model to use")

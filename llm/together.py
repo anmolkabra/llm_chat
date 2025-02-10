@@ -14,22 +14,25 @@ class TogetherChat(CommonLLMChat):
         temperature: float = 0.0,
         seed: int = 0,
     ):
+        """
+        Examples of model names:
+            "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo"
+            "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo"
+            "meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo"
+            "meta-llama/Llama-Vision-Free"
+        """
         super().__init__(model_name, model_path, max_tokens, temperature, seed)
         self.client = together.Together(api_key=os.getenv("TOGETHER_API_KEY"))
 
     @staticmethod
     def is_model_supported(model_name: str) -> bool:
-        # "together:meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo"
-        # "together:meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo"
-        # "together:meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo"
-        # "together:meta-llama/Llama-Vision-Free"
         return model_name.startswith("together:")
 
     def _call_api(self, messages_api_format: list[dict]) -> str:
         # https://github.com/togethercomputer/together-python
         # Remove the "together:" prefix before setting up the client
         completion = self.client.chat.completions.create(
-            model=self.model_name[len("together:") :],
+            model=self.model_name,
             messages=messages_api_format,
             temperature=self.temperature,
             seed=self.seed,
