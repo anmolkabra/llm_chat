@@ -4,6 +4,10 @@ import files
 from _types import ContentImageMessage, ContentTextMessage, Conversation
 
 
+def is_ollama_model(model_name: str) -> bool:
+    return model_name.startswith("ollama:")
+
+
 class LLMChat(abc.ABC):
     SUPPORTED_LLM_NAMES: list[str] = []
 
@@ -29,9 +33,11 @@ class LLMChat(abc.ABC):
             seed (Optional[int]): Seed for random number generator, passed to the model if applicable.
                 Defaults to 0.
         """
-        assert (
-            model_name in self.SUPPORTED_LLM_NAMES
-        ), f"Model name {model_name} must be one of {self.SUPPORTED_LLM_NAMES}."
+        if not is_ollama_model(model_name):
+            # If not an ollama model, check if the model name is supported
+            assert (
+                model_name in self.SUPPORTED_LLM_NAMES
+            ), f"Model name {model_name} must be one of {self.SUPPORTED_LLM_NAMES}."
         self.model_name = model_name
         self.model_path = model_path
         self.max_tokens = max_tokens

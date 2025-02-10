@@ -1,15 +1,15 @@
 import ollama
 
 from _types import ContentTextMessage, Conversation
-from llm.common import CommonLLMChat
+from llm.common import CommonLLMChat, is_ollama_model
 
 
 class OllamaChat(CommonLLMChat):
-    SUPPORTED_LLM_NAMES: list[str] = [
-        "ollama:deepseek-r1:8b",
-        "ollama:deepseek-r1:1.5b",
-        "ollama:llama3.2:1b",
-    ]
+    # NOTE: We don't want to hardcode the supported ollama models here,
+    # because this list is used at init time of streamlit UI. If ollama is not installed
+    # on the system, the streamlit UI will crash. We still want other models to be available.
+    # So we skip checking for supported models here.
+    SUPPORTED_LLM_NAMES: list[str] = []
 
     def __init__(
         self,
@@ -19,7 +19,7 @@ class OllamaChat(CommonLLMChat):
         temperature: float = 0.0,
         seed: int = 0,
     ):
-        assert model_name.startswith("ollama:"), "model_name must start with 'ollama:'"
+        assert is_ollama_model(model_name), "model_name must start with 'ollama:'"
         super().__init__(model_name, model_path, max_tokens, temperature, seed)
         self.ollama_headers: dict = {}
         self.client = ollama.Client(
