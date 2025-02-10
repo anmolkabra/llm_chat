@@ -2,7 +2,7 @@ import os
 
 import google.generativeai as gemini
 
-from _types import Conversation, ContentTextMessage
+from _types import ContentTextMessage, Conversation
 from llm.common import CommonLLMChat
 
 
@@ -17,11 +17,6 @@ class GeminiChat(CommonLLMChat):
     ]
     ```
     """
-    SUPPORTED_LLM_NAMES = [
-        "gemini-1.5-flash-002",
-        "gemini-1.5-pro-002",
-        "gemini-2.0-flash-exp",
-    ]
 
     def __init__(
         self,
@@ -35,6 +30,13 @@ class GeminiChat(CommonLLMChat):
 
         gemini.configure(api_key=os.getenv("GEMINI_API_KEY"))
         self.client = gemini.GenerativeModel(self.model_name)
+
+    @staticmethod
+    def is_model_supported(model_name: str) -> bool:
+        # "gemini-1.5-flash-002"
+        # "gemini-1.5-pro-002"
+        # "gemini-2.0-flash-exp"
+        return model_name.startswith("gemini")
 
     def _convert_conv_to_api_format(self, conv: Conversation) -> list[dict]:
         # https://ai.google.dev/gemini-api/docs/models/gemini

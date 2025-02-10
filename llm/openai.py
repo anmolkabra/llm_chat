@@ -6,11 +6,6 @@ from llm.common import CommonLLMChat
 
 
 class OpenAIChat(CommonLLMChat):
-    SUPPORTED_LLM_NAMES: list[str] = [
-        "gpt-4o-mini-2024-07-18",
-        "gpt-4o-2024-11-20",
-    ]
-
     def __init__(
         self,
         model_name: str,
@@ -21,6 +16,12 @@ class OpenAIChat(CommonLLMChat):
     ):
         super().__init__(model_name, model_path, max_tokens, temperature, seed)
         self.client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+    @staticmethod
+    def is_model_supported(model_name: str) -> bool:
+        # "gpt-4o-mini-2024-07-18"
+        # "gpt-4o-2024-11-20"
+        return model_name.startswith("gpt-")
 
     def _call_api(self, messages_api_format: list[dict]) -> str:
         # https://platform.openai.com/docs/api-reference/introduction

@@ -6,8 +6,9 @@ from typing import Literal
 import streamlit as st
 from PIL import Image
 
-import llm
 from _types import ChatSession, ContentImageMessage, ContentTextMessage, Conversation, Message
+from llm import get_llm
+from llm.common import LLMChat
 
 
 def init_conv(add_init_image: bool = False) -> Conversation:
@@ -20,7 +21,7 @@ def init_conv(add_init_image: bool = False) -> Conversation:
 
 
 @st.cache_resource
-def get_llm_chat(_args: argparse.Namespace) -> llm.LLMChat:
+def get_llm_chat(_args: argparse.Namespace) -> LLMChat:
     """
     Loads the LLM chat object based on the model name.
     Function is cached in streamlit so that the model is not reloaded on every streamlit ui repaint.
@@ -38,7 +39,7 @@ def get_llm_chat(_args: argparse.Namespace) -> llm.LLMChat:
         "temperature": _args.temperature,
         "seed": _args.seed,
     }
-    return llm.get_llm(_args.model_name, llm_kwargs)
+    return get_llm(_args.model_name, llm_kwargs)
 
 
 def format_md_text(text: str) -> str:
@@ -156,7 +157,7 @@ def ui_main(args: argparse.Namespace) -> None:
     """
     st.title(f"Chat with {args.model_name}")
 
-    llm_chat: llm.LLMChat = st.session_state.llm_chat
+    llm_chat: LLMChat = st.session_state.llm_chat
 
     # Display sidebar
     display_sidebar()
@@ -189,7 +190,6 @@ if __name__ == "__main__":
         "--model_name",
         type=str,
         default="together:meta-llama/Llama-Vision-Free",
-        choices=llm.SUPPORTED_LLM_NAMES,
         help="The name of the model to use",
     )
     parser.add_argument("--model_path", type=str, default=None, help="Path to the model to use")
@@ -208,7 +208,7 @@ if __name__ == "__main__":
     # is_hf_model = args.model_name in llm.HuggingfaceChat.SUPPORTED_LLM_NAMES
     is_hf_model = False
     chat_history = init_conv(add_init_image=is_hf_model)
-    llm_chat: llm.LLMChat = get_llm_chat(args)
+    llm_chat: LLMChat = get_llm_chat(args)
 
     if "llm_chat" not in st.session_state:
         st.session_state.llm_chat = llm_chat

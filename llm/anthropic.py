@@ -6,11 +6,6 @@ from llm.common import CommonLLMChat
 
 
 class AnthropicChat(CommonLLMChat):
-    SUPPORTED_LLM_NAMES: list[str] = [
-        "claude-3-5-haiku-20241022",
-        "claude-3-5-sonnet-20241022",
-    ]
-
     def __init__(
         self,
         model_name: str,
@@ -21,6 +16,12 @@ class AnthropicChat(CommonLLMChat):
     ):
         super().__init__(model_name, model_path, max_tokens, temperature, seed)
         self.client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
+    @staticmethod
+    def is_model_supported(model_name: str) -> bool:
+        # "claude-3-5-haiku-20241022"
+        # "claude-3-5-sonnet-20241022"
+        return model_name.startswith("claude")
 
     def _call_api(self, messages_api_format: list[dict]) -> str:
         # https://docs.anthropic.com/en/api/migrating-from-text-completions-to-messages

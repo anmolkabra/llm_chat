@@ -6,13 +6,6 @@ from llm.common import CommonLLMChat
 
 
 class TogetherChat(CommonLLMChat):
-    SUPPORTED_LLM_NAMES: list[str] = [
-        "together:meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
-        "together:meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
-        "together:meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo",
-        "together:meta-llama/Llama-Vision-Free",
-    ]
-
     def __init__(
         self,
         model_name: str,
@@ -21,9 +14,16 @@ class TogetherChat(CommonLLMChat):
         temperature: float = 0.0,
         seed: int = 0,
     ):
-        assert model_name.startswith("together:"), "model_name must start with 'together:'"
         super().__init__(model_name, model_path, max_tokens, temperature, seed)
         self.client = together.Together(api_key=os.getenv("TOGETHER_API_KEY"))
+
+    @staticmethod
+    def is_model_supported(model_name: str) -> bool:
+        # "together:meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo"
+        # "together:meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo"
+        # "together:meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo"
+        # "together:meta-llama/Llama-Vision-Free"
+        return model_name.startswith("together:")
 
     def _call_api(self, messages_api_format: list[dict]) -> str:
         # https://github.com/togethercomputer/together-python

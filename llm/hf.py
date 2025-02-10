@@ -6,13 +6,7 @@ from _types import ContentImageMessage, Conversation
 from llm.common import LLMChat
 
 
-class HuggingfaceChat(LLMChat):
-    SUPPORTED_LLM_NAMES: list[str] = [
-        "meta-llama/Llama-3.1-8B-Instruct",
-        "meta-llama/Llama-3.2-3B-Instruct",
-        "meta-llama/Llama-3.2-11B-Vision-Instruct",
-    ]
-
+class HFLlamaChat(LLMChat):
     def __init__(
         self,
         model_name: str,
@@ -24,13 +18,20 @@ class HuggingfaceChat(LLMChat):
         super().__init__(model_name, model_path, max_tokens, temperature, seed)
 
         # Use local model if provided
-        model_path_to_use = self.model_path or self.model_name
+        model_path_to_use = self.model_path or self.model_name[len("hf:") :]
         self.model = MllamaForConditionalGeneration.from_pretrained(
             model_path_to_use,
             torch_dtype=torch.bfloat16,
             device_map="auto",
         )
         self.processor = AutoProcessor.from_pretrained(model_path_to_use)
+
+    @staticmethod
+    def is_model_supported(model_name: str) -> bool:
+        # "meta-llama/Llama-3.1-8B-Instruct"
+        # "meta-llama/Llama-3.2-3B-Instruct"
+        # "meta-llama/Llama-3.2-11B-Vision-Instruct"
+        return model_name.startswith("hf:meta-llama")
 
     def generate_response(self, conv: Conversation) -> str:
         # Take out images from messages
