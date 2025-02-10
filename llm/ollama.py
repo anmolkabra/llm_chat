@@ -5,7 +5,11 @@ from llm.common import CommonLLMChat
 
 
 class OllamaChat(CommonLLMChat):
-    SUPPORTED_LLM_NAMES: list[str] = [f"ollama:{m_cls.model}" for m_cls in ollama.list().models]
+    SUPPORTED_LLM_NAMES: list[str] = [
+        "ollama:deepseek-r1:8b",
+        "ollama:deepseek-r1:1.5b",
+        "ollama:llama3.2:1b",
+    ]
 
     def __init__(
         self,
