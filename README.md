@@ -7,7 +7,7 @@ Spin up your own chat interface locally with
 ./scripts/run_chat.sh --server openai --model_name gpt-4o-mini-2024-07-18
 ```
 
-See `llm/__init__.py` for a list of supported LLM names.
+See `llm/__init__.py` for a list of supported LLM servers.
 
 ## Installation
 
@@ -58,6 +58,22 @@ Then use the same model name to run the UI:
 ```bash
 ./scripts/run_chat.sh --server ollama --model_name ollama:llama3.2:1b
 ```
+
+### LLMs through vLLM
+[vLLM](https://docs.vllm.ai/) provides a way to locally run LLMs on your machine with GPUs.
+Install vllm and serve the (downloaded) model through local API:
+```bash
+pip install vllm
+vllm serve deepseek-ai/DeepSeek-R1-Distill-Qwen-32B --dtype auto --api-key token-abc123
+```
+
+Then use the same model name to run the UI:
+```bash
+OPENAI_API_KEY="token-abc123" ./scripts/run_chat.sh --server vllm --model_name deepseek-ai/DeepSeek-R1-Distill-Qwen-32B
+```
+
+Note that we set the `OPENAI_API_KEY` to the same API key we used to serve with `vllm`.
+This is because `vllm` uses the OpenAI chat interface client to serve local LLMs.
 
 ### LLMs through Huggingface
 
