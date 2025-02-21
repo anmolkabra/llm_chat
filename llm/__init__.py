@@ -5,6 +5,7 @@ from llm.hf import HFLlamaChat
 from llm.ollama import OllamaChat
 from llm.openai import OpenAIChat
 from llm.together import TogetherChat
+from llm.vllm import VLLMChat
 
 SUPPORTED_LLM_SERVERS = [
     "anthropic",
@@ -13,6 +14,7 @@ SUPPORTED_LLM_SERVERS = [
     "ollama",
     "openai",
     "together",
+    "vllm",
 ]
 
 
@@ -33,5 +35,7 @@ def get_llm(server: str, model_name: str, model_kwargs: dict) -> LLMChat:
             return OpenAIChat(model_name=model_name, **model_kwargs)
         case "together":
             return TogetherChat(model_name=model_name, **model_kwargs)
+        case "vllm":
+            return VLLMChat(model_name=model_name, **model_kwargs)
         case _:
             raise ValueError(f"Provider {server} not supported.")
