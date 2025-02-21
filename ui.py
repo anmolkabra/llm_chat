@@ -46,9 +46,13 @@ def format_md_text(text: str) -> str:
     """
     Formats text for markdown display:
     - Encloses <think>...</think> in a blockquote.
+    - Converts latex \[ and \] to $$.
     """
     # Replace <think>...</think> with blockquote
     text = text.replace("<think>", "<blockquote>").replace("</think>", "</blockquote>")
+
+    # Convert latex \[ and \] to $$
+    text = text.replace(r"\[", "$$").replace(r"\]", "$$")
     return text
 
 
